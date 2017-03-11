@@ -66,6 +66,8 @@ android {
 
         // This API key is provided for convenience. Please go to https://www.last.fm/api/account/create and create your own.
         buildConfigField("String", "LASTFM_API_KEY", "\"${getProperty(getProperties('../public.properties'), 'LASTFM_API_KEY')}\"")
+
+        manifestPlaceholders = [CRASHLYTICS_API_KEY: ""]
     }
 
     signingConfigs {
@@ -82,6 +84,7 @@ android {
 
         debug {
             applicationIdSuffix ".debug"
+            ext.enableCrashlytics = false
         }
 
         release {
@@ -91,6 +94,7 @@ android {
             signingConfig signingConfigs.release
 
             buildConfigField("String", "LASTFM_API_KEY", "\"${getProperty(getProperties('../private.properties'), 'LASTFM_API_KEY')}\"")
+            manifestPlaceholders = [CRASHLYTICS_API_KEY: "${getProperty(getProperties('../private.properties'), 'CRASHLYTICS_API_KEY')}"]
         }
 
         applicationVariants.all { variant ->
@@ -256,6 +260,7 @@ dependencies {
     compile libs.rxImageSel
     compile libs.rxJava
     compile libs.rxRelay
+    compile libs.rxReceivers
     compile libs.slidingUpPanel
     compile libs.streams
     compile(libs.crashlytics) {

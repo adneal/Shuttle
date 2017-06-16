@@ -8,6 +8,7 @@ import com.simplecity.amp_library.ShuttleApplication;
 import com.simplecity.amp_library.playback.MusicService;
 import com.simplecity.amp_library.playback.PlaybackMonitor;
 import com.simplecity.amp_library.ui.views.PlayerView;
+import com.simplecity.amp_library.utils.LogUtils;
 import com.simplecity.amp_library.utils.MusicUtils;
 
 import java.util.concurrent.TimeUnit;
@@ -41,20 +42,24 @@ public class PlayerPresenter extends Presenter<PlayerView> {
         addSubcscription(PlaybackMonitor.getInstance().getProgressObservable()
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(progress -> view.setSeekProgress((int) (progress * 1000))));
+                .subscribe(progress -> view.setSeekProgress((int) (progress * 1000)),
+                        error -> LogUtils.logException("PlayerPresenter: Error updating seek progress", error)));
 
         addSubcscription(PlaybackMonitor.getInstance().getCurrentTimeObservable()
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(pos -> refreshCurrentTimeText(pos / 1000)));
+                .subscribe(pos -> refreshCurrentTimeText(pos / 1000),
+                        error -> LogUtils.logException("PlayerPresenter: Error refreshing time text", error)));
 
         addSubcscription(Observable.interval(500, TimeUnit.MILLISECONDS)
                 .onBackpressureDrop()
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(aLong -> setCurrentTimeVisibility(MusicUtils.isPlaying() || !currentPlaybackTimeVisible)));
+                .subscribe(aLong -> setCurrentTimeVisibility(MusicUtils.isPlaying() || !currentPlaybackTimeVisible),
+                        error -> LogUtils.logException("PlayerPresenter: Error emitting current time", error)));
 
         final IntentFilter filter = new IntentFilter();
         filter.addAction(MusicService.InternalIntents.META_CHANGED);
+        filter.addAction(MusicService.InternalIntents.QUEUE_CHANGED);
         filter.addAction(MusicService.InternalIntents.PLAY_STATE_CHANGED);
         filter.addAction(MusicService.InternalIntents.SHUFFLE_CHANGED);
         filter.addAction(MusicService.InternalIntents.REPEAT_CHANGED);
@@ -68,6 +73,9 @@ public class PlayerPresenter extends Presenter<PlayerView> {
                     if (action != null) {
                         switch (action) {
                             case MusicService.InternalIntents.META_CHANGED:
+                                updateTrackInfo();
+                                break;
+                                case MusicService.InternalIntents.QUEUE_CHANGED:
                                 updateTrackInfo();
                                 break;
                             case MusicService.InternalIntents.PLAY_STATE_CHANGED:
@@ -89,7 +97,7 @@ public class PlayerPresenter extends Presenter<PlayerView> {
                                 break;
                         }
                     }
-                }));
+                }, error -> LogUtils.logException("PlayerPresenter: Error sending broadcast", error)));
     }
 
 

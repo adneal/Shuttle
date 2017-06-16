@@ -1,5 +1,30 @@
 package com.simplecity.amp_library.ui.fragments;
 
+import android.app.ProgressDialog;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.os.Bundle;
+import android.preference.PreferenceManager;
+import android.support.v4.graphics.drawable.DrawableCompat;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.PopupMenu;
+import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.Toolbar;
+import android.text.TextUtils;
+import android.view.ActionMode;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.SubMenu;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+import android.widget.Toast;
+
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.annimon.stream.Collectors;
 import com.annimon.stream.Stream;
@@ -29,6 +54,7 @@ import com.simplecity.amp_library.utils.DialogUtils;
 import com.simplecity.amp_library.utils.DrawableUtils;
 import com.simplecity.amp_library.utils.FileBrowser;
 import com.simplecity.amp_library.utils.FileHelper;
+import com.simplecity.amp_library.utils.LogUtils;
 import com.simplecity.amp_library.utils.MusicUtils;
 import com.simplecity.amp_library.utils.PlaylistUtils;
 import com.simplecity.amp_library.utils.SettingsManager;
@@ -37,39 +63,15 @@ import com.simplecity.amp_library.utils.SortManager;
 import com.simplecity.amp_library.utils.ThemeUtils;
 import com.simplecity.amp_library.utils.ViewUtils;
 
-import android.app.ProgressDialog;
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.graphics.Color;
-import android.os.AsyncTask;
-import android.os.Bundle;
-import android.preference.PreferenceManager;
-import android.support.v4.graphics.drawable.DrawableCompat;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.PopupMenu;
-import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.Toolbar;
-import android.text.TextUtils;
-import android.view.ActionMode;
-import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
-import android.view.SubMenu;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.LinearLayout;
-import android.widget.ProgressBar;
-import android.widget.TextView;
-import android.widget.Toast;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import rx.Observable;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
+import rx.subscriptions.CompositeSubscription;
 
 public class FolderFragment extends BaseFragment implements
         MusicUtils.Defs,
@@ -85,38 +87,38 @@ public class FolderFragment extends BaseFragment implements
 
     static final int FRAGMENT_GROUPID = FOLDER_FRAGMENT_GROUP_ID;
 
-    private View mRootView;
+    private RecyclerView recyclerView;
 
-    private RecyclerView mRecyclerView;
+    FolderAdapter adapter;
 
-    FolderAdapter mAdapter;
+    private Toolbar toolbar;
 
-    private Toolbar mToolbar;
+    private View dummyToolbar;
+    private View dummyStatusBar;
 
-    private View mDummyToolbar;
-    private View mDummyStatusBar;
+    boolean isInActionMode = false;
 
-    boolean mInActionMode = false;
+    String currentDir;
 
-    String mCurrentDir;
+    private SharedPreferences prefs;
 
-    private SharedPreferences mPrefs;
+    Breadcrumb breadcrumb;
 
-    Breadcrumb mBreadcrumb;
+    private SharedPreferences.OnSharedPreferenceChangeListener sharedPreferenceChangeListener;
 
-    private SharedPreferences.OnSharedPreferenceChangeListener mSharedPreferenceChangeListener;
+    FileBrowser fileBrowser;
 
-    FileBrowser mFileBrowser;
-
-    boolean mShowCheckboxes;
+    boolean showCheckboxes;
 
     List<String> paths = new ArrayList<>();
 
-    boolean mShowBreadcrumbsInList;
+    boolean showBreadcrumbsInList;
 
-    private ActionMode mActionMode;
+    private ActionMode actionMode;
 
-    ActionMode.Callback mActionModeCallback;
+    ActionMode.Callback actionModeCallback;
+
+    private CompositeSubscription subscriptions;
 
     public FolderFragment() {
     }
@@ -146,9 +148,11 @@ public class FolderFragment extends BaseFragment implements
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        mPrefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        subscriptions = new CompositeSubscription();
 
-        mSharedPreferenceChangeListener = (sharedPreferences, key) -> {
+        prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+
+        sharedPreferenceChangeListener = (sharedPreferences, key) -> {
             if (key.equals("pref_theme_highlight_color") || key.equals("pref_theme_accent_color") || key.equals("pref_theme_white_accent")) {
                 themeUIComponents();
             }
@@ -156,105 +160,100 @@ public class FolderFragment extends BaseFragment implements
 
         setHasOptionsMenu(true);
 
-        mPrefs.registerOnSharedPreferenceChangeListener(mSharedPreferenceChangeListener);
+        prefs.registerOnSharedPreferenceChangeListener(sharedPreferenceChangeListener);
 
-        mAdapter = new FolderAdapter();
-        mAdapter.setListener(this);
+        adapter = new FolderAdapter();
+        adapter.setListener(this);
 
-        mFileBrowser = new FileBrowser();
+        fileBrowser = new FileBrowser();
 
-        ShuttleUtils.execute(new AsyncTask<Void, Void, File>() {
-            @Override
-            protected File doInBackground(Void... params) {
-                File currentDir = null;
-                if (savedInstanceState != null) {
-                    String path = savedInstanceState.getString(ARG_CURRENT_DIR);
-                    if (path != null) {
-                        currentDir = new File(path);
-                    }
-                } else {
-                    currentDir = mFileBrowser.getInitialDir();
-                }
-                return currentDir;
-            }
-
-            @Override
-            protected void onPostExecute(File file) {
-                super.onPostExecute(file);
-                changeDir(file);
-            }
-        });
+        if (savedInstanceState != null) {
+            currentDir = savedInstanceState.getString(ARG_CURRENT_DIR);
+        }
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
-        if (mRootView == null) {
+        View rootView = inflater.inflate(R.layout.fragment_folder_browser, container, false);
 
-            mRootView = inflater.inflate(R.layout.fragment_folder_browser, container, false);
+        toolbar = (Toolbar) rootView.findViewById(R.id.toolbar);
 
-            mToolbar = (Toolbar) mRootView.findViewById(R.id.toolbar);
+        dummyToolbar = rootView.findViewById(R.id.dummyToolbar);
+        dummyStatusBar = rootView.findViewById(R.id.dummyStatusBar);
 
-            mDummyToolbar = mRootView.findViewById(R.id.dummyToolbar);
-            mDummyStatusBar = mRootView.findViewById(R.id.dummyStatusBar);
-
-            //We need to set the dummy status bar height.
-            if (ShuttleUtils.hasKitKat()) {
-                LinearLayout.LayoutParams statusBarParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (int) ActionBarUtils.getStatusBarHeight(getActivity()));
-                mDummyStatusBar.setLayoutParams(statusBarParams);
-            } else {
-                mDummyStatusBar.setVisibility(View.GONE);
-            }
-
-            if (getParentFragment() == null || !(getParentFragment() instanceof MainFragment)) {
-                mShowBreadcrumbsInList = false;
-                mBreadcrumb = (Breadcrumb) mRootView.findViewById(R.id.breadcrumb_view);
-                mBreadcrumb.setTextColor(Color.WHITE);
-                mBreadcrumb.addBreadcrumbListener(this);
-                if (!TextUtils.isEmpty(mCurrentDir)) {
-                    mBreadcrumb.changeBreadcrumbPath(mCurrentDir);
-                }
-                if (ShuttleUtils.hasKitKat()) {
-                    mDummyStatusBar.setVisibility(View.VISIBLE);
-                }
-                mDummyToolbar.setVisibility(View.VISIBLE);
-            } else {
-                mShowBreadcrumbsInList = true;
-                changeBreadcrumbPath();
-                mToolbar.setVisibility(View.GONE);
-                if (ShuttleUtils.hasKitKat()) {
-                    mDummyStatusBar.setVisibility(View.GONE);
-                }
-                mDummyToolbar.setVisibility(View.GONE);
-            }
-
-            mRecyclerView = (RecyclerView) mRootView.findViewById(android.R.id.list);
-            mRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
-            mRecyclerView.setAdapter(mAdapter);
-
-            themeUIComponents();
+        //We need to set the dummy status bar height.
+        if (ShuttleUtils.hasKitKat()) {
+            LinearLayout.LayoutParams statusBarParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (int) ActionBarUtils.getStatusBarHeight(getActivity()));
+            dummyStatusBar.setLayoutParams(statusBarParams);
+        } else {
+            dummyStatusBar.setVisibility(View.GONE);
         }
-        return mRootView;
+
+        if (getParentFragment() == null || !(getParentFragment() instanceof MainFragment)) {
+            showBreadcrumbsInList = false;
+            breadcrumb = (Breadcrumb) rootView.findViewById(R.id.breadcrumb_view);
+            breadcrumb.setTextColor(Color.WHITE);
+            breadcrumb.addBreadcrumbListener(this);
+            if (!TextUtils.isEmpty(currentDir)) {
+                breadcrumb.changeBreadcrumbPath(currentDir);
+            }
+            if (ShuttleUtils.hasKitKat()) {
+                dummyStatusBar.setVisibility(View.VISIBLE);
+            }
+            dummyToolbar.setVisibility(View.VISIBLE);
+        } else {
+            showBreadcrumbsInList = true;
+            changeBreadcrumbPath();
+            toolbar.setVisibility(View.GONE);
+            if (ShuttleUtils.hasKitKat()) {
+                dummyStatusBar.setVisibility(View.GONE);
+            }
+            dummyToolbar.setVisibility(View.GONE);
+        }
+
+        recyclerView = (RecyclerView) rootView.findViewById(android.R.id.list);
+        recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
+        recyclerView.setAdapter(adapter);
+
+        themeUIComponents();
+
+        return rootView;
     }
 
     @Override
     public void onResume() {
         super.onResume();
 
-        changeBreadcrumbPath();
-        if (mBreadcrumb != null) {
-            mBreadcrumb.changeBreadcrumbPath(mCurrentDir);
+        if (currentDir == null) {
+            subscriptions.add(Observable.fromCallable(() -> {
+                if (!TextUtils.isEmpty(currentDir)) {
+                    return new File(currentDir);
+                } else {
+                    return fileBrowser.getInitialDir();
+                }
+            }).subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(this::changeDir,
+                            error -> LogUtils.logException("FolderFragment: Error in onResume", error)));
         }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+
+        subscriptions.clear();
     }
 
     @Override
     public void onDestroyView() {
 
-        if (mActionMode != null) {
-            mActionMode.finish();
-            mActionMode = null;
+        if (actionMode != null) {
+            actionMode.finish();
+            actionMode = null;
         }
-        mActionModeCallback = null;
+        actionModeCallback = null;
 
         super.onDestroyView();
     }
@@ -262,13 +261,13 @@ public class FolderFragment extends BaseFragment implements
     @Override
     public void onDestroy() {
 
-        mPrefs.unregisterOnSharedPreferenceChangeListener(mSharedPreferenceChangeListener);
+        prefs.unregisterOnSharedPreferenceChangeListener(sharedPreferenceChangeListener);
 
-        if (mActionMode != null) {
-            mActionMode.finish();
-            mActionMode = null;
+        if (actionMode != null) {
+            actionMode.finish();
+            actionMode = null;
         }
-        mActionModeCallback = null;
+        actionModeCallback = null;
 
         super.onDestroy();
     }
@@ -283,28 +282,28 @@ public class FolderFragment extends BaseFragment implements
 
     private void themeUIComponents() {
 
-        if (mDummyStatusBar != null) {
+        if (dummyStatusBar != null) {
             //noinspection ResourceAsColor
-            mDummyStatusBar.setBackgroundColor(ShuttleUtils.hasLollipop() ? ColorUtils.getPrimaryColorDark(getContext()) : ColorUtils.getPrimaryColor());
+            dummyStatusBar.setBackgroundColor(ShuttleUtils.hasLollipop() ? ColorUtils.getPrimaryColorDark(getContext()) : ColorUtils.getPrimaryColor());
         }
 
-        if (mDummyToolbar != null) {
-            mDummyToolbar.setBackgroundColor(ColorUtils.getPrimaryColor());
+        if (dummyToolbar != null) {
+            dummyToolbar.setBackgroundColor(ColorUtils.getPrimaryColor());
         }
 
-        if (mToolbar != null) {
+        if (toolbar != null) {
             if (getParentFragment() != null && getParentFragment() instanceof MainFragment) {
-                mToolbar.setBackgroundColor(Color.TRANSPARENT);
+                toolbar.setBackgroundColor(Color.TRANSPARENT);
             } else {
-                mToolbar.setBackgroundColor(ColorUtils.getPrimaryColor());
+                toolbar.setBackgroundColor(ColorUtils.getPrimaryColor());
             }
         }
 
-        mAdapter.notifyItemRangeChanged(0, mAdapter.getItemCount());
+        adapter.notifyItemRangeChanged(0, adapter.getItemCount());
 
-        ThemeUtils.themeRecyclerView(mRecyclerView);
+        ThemeUtils.themeRecyclerView(recyclerView);
 
-        mRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
                 ThemeUtils.themeRecyclerView(recyclerView);
@@ -315,7 +314,7 @@ public class FolderFragment extends BaseFragment implements
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
-        outState.putString(ARG_CURRENT_DIR, mCurrentDir);
+        outState.putString(ARG_CURRENT_DIR, currentDir);
         super.onSaveInstanceState(outState);
     }
 
@@ -419,15 +418,15 @@ public class FolderFragment extends BaseFragment implements
                 return true;
 
             case R.id.whitelist:
-                mActionMode = mRecyclerView.startActionMode(getActionModeCallback());
-                mInActionMode = true;
+                actionMode = recyclerView.startActionMode(getActionModeCallback());
+                isInActionMode = true;
                 updateWhitelist();
                 showCheckboxes(true);
                 break;
 
             case R.id.show_filenames:
                 SettingsManager.getInstance().setFolderBrowserShowFileNames(!item.isChecked());
-                mAdapter.notifyItemRangeChanged(0, mAdapter.getItemCount());
+                adapter.notifyItemRangeChanged(0, adapter.getItemCount());
                 break;
 
         }
@@ -457,68 +456,62 @@ public class FolderFragment extends BaseFragment implements
 
     public void changeDir(File newDir) {
 
-        final String path = FileHelper.getPath(newDir);
+        subscriptions.add(Observable.fromCallable(() -> {
 
-        if (TextUtils.isEmpty(path)) {
-            return;
-        }
+            final String path = FileHelper.getPath(newDir);
 
-        ShuttleUtils.execute(new AsyncTask<Void, Void, List<BaseFileObject>>() {
-
-            private final File file = new File(path);
-
-            @Override
-            protected List<BaseFileObject> doInBackground(Void... params) {
-                return mFileBrowser.loadDir(file);
+            if (TextUtils.isEmpty(path)) {
+                return new ArrayList<BaseFileObject>();
             }
 
-            @Override
-            protected void onPostExecute(List<BaseFileObject> fileObjects) {
-                super.onPostExecute(fileObjects);
+            currentDir = path;
 
-                List<AdaptableItem> items = Stream.of(fileObjects)
-                        .map(baseFileObject -> {
-                            FolderView folderView = new FolderView(baseFileObject);
-                            folderView.setChecked(mShowCheckboxes);
-                            return folderView;
-                        })
-                        .collect(Collectors.toList());
+            return fileBrowser.loadDir(new File(path));
+        })
+                .map(baseFileObjects -> {
+                    List<AdaptableItem> items = Stream.of(baseFileObjects)
+                            .map(baseFileObject -> {
+                                FolderView folderView = new FolderView(baseFileObject);
+                                folderView.setChecked(showCheckboxes);
+                                return folderView;
+                            })
+                            .collect(Collectors.toList());
 
-				mCurrentDir = path;
+                    if (showBreadcrumbsInList) {
+                        BreadcrumbsView breadcrumbsView = new BreadcrumbsView(currentDir);
+                        breadcrumbsView.setBreadcrumbsPath(currentDir);
+                        items.add(0, breadcrumbsView);
+                    }
+                    return items;
+                })
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(adaptableItems -> {
 
-                if (mShowBreadcrumbsInList) {
-                    BreadcrumbsView breadcrumbsView = new BreadcrumbsView(mCurrentDir);
-                    breadcrumbsView.setBreadcrumbsPath(mCurrentDir);
-                    items.add(0, breadcrumbsView);
-                }
+                    if (adapter != null) {
+                        adapter.setItems(adaptableItems);
+                    }
 
-                if (mAdapter != null) {
-                    mAdapter.setItems(items);
-                }
-
-                if (mBreadcrumb != null) {
-                    mBreadcrumb.changeBreadcrumbPath(mCurrentDir);
-                }
-                if (mAdapter != null) {
-                    changeBreadcrumbPath();
-                }
-
-            }
-        });
-
+                    if (breadcrumb != null) {
+                        breadcrumb.changeBreadcrumbPath(currentDir);
+                    }
+                    if (adapter != null) {
+                        changeBreadcrumbPath();
+                    }
+                }, error -> LogUtils.logException("FolderFragment: Error changing dir", error)));
     }
 
     public void reload() {
-        if (mCurrentDir != null) {
-            changeDir(new File(mCurrentDir));
+        if (currentDir != null) {
+            changeDir(new File(currentDir));
         }
     }
 
     @Override
     public boolean onBackPressed() {
 
-        if (mFileBrowser.getCurrentDir() != null && mFileBrowser.getRootDir() != null && mFileBrowser.getCurrentDir().compareTo(mFileBrowser.getRootDir()) != 0) {
-            File parent = mFileBrowser.getCurrentDir().getParentFile();
+        if (fileBrowser.getCurrentDir() != null && fileBrowser.getRootDir() != null && fileBrowser.getCurrentDir().compareTo(fileBrowser.getRootDir()) != 0) {
+            File parent = fileBrowser.getCurrentDir().getParentFile();
             changeDir(parent);
             return true;
         }
@@ -528,7 +521,7 @@ public class FolderFragment extends BaseFragment implements
     @Override
     public void onItemClick(View v, int position, BaseFileObject fileObject) {
 
-        if (!mInActionMode) {
+        if (!isInActionMode) {
 
             if (fileObject.fileType == FileType.FILE) {
                 FileHelper.getSongList(new File(fileObject.path), false, true)
@@ -543,10 +536,12 @@ public class FolderFragment extends BaseFragment implements
                                 }
                             }
                             MusicUtils.playAll(songs, index, () -> {
-                                final String message = getContext().getString(R.string.emptyplaylist);
-                                Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
+                                if (isAdded() && getContext() != null) {
+                                    final String message = getContext().getString(R.string.emptyplaylist);
+                                    Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
+                                }
                             });
-                        });
+                        }, error -> LogUtils.logException("FolderFragment: Error playing all", error));
             } else {
                 changeDir(new File(fileObject.path));
             }
@@ -613,15 +608,17 @@ public class FolderFragment extends BaseFragment implements
             switch (item.getItemId()) {
 
                 case TAGGER:
-                    FileHelper.getSong(new File(fileObject.path))
+                    subscriptions.add(FileHelper.getSong(new File(fileObject.path))
                             .subscribeOn(Schedulers.io())
-                            .subscribe(song -> TaggerDialog.newInstance(song).show(getFragmentManager()));
+                            .subscribe(song -> TaggerDialog.newInstance(song).show(getFragmentManager()),
+                                    error -> LogUtils.logException("FolderFragment: Error editing tags", error)));
                     return true;
 
                 case QUEUE:
-                    FileHelper.getSongList(new File(fileObject.path), true, false)
+                    subscriptions.add(FileHelper.getSongList(new File(fileObject.path), true, false)
                             .observeOn(AndroidSchedulers.mainThread())
-                            .subscribe(songs -> MusicUtils.addToQueue(getActivity(), songs));
+                            .subscribe(songs -> MusicUtils.addToQueue(getActivity(), songs),
+                                    error -> LogUtils.logException("FolderFragment: Error adding to queue", error)));
                     return true;
 
                 case DELETE_ITEM:
@@ -638,7 +635,7 @@ public class FolderFragment extends BaseFragment implements
                     builder.positiveText(R.string.button_ok)
                             .onPositive((materialDialog, dialogAction) -> {
                                 if (FileHelper.deleteFile(new File(fileObject.path))) {
-                                    mAdapter.removeItem(position);
+                                    adapter.removeItem(position);
                                     CustomMediaScanner.scanFiles(Collections.singletonList(fileObject.path), null);
                                 } else {
                                     Toast.makeText(getActivity(),
@@ -669,7 +666,7 @@ public class FolderFragment extends BaseFragment implements
                             .onPositive((materialDialog, dialogAction) -> {
                                 if (editText.getText() != null) {
                                     if (FileHelper.renameFile(getActivity(), fileObject, editText.getText().toString())) {
-                                        mAdapter.notifyDataSetChanged();
+                                        adapter.notifyDataSetChanged();
                                     } else {
                                         Toast.makeText(getActivity(),
                                                 fileObject.fileType == FileType.FOLDER ? R.string.rename_folder_failed : R.string.rename_file_failed,
@@ -681,20 +678,22 @@ public class FolderFragment extends BaseFragment implements
                             .show();
                     return true;
                 case USE_AS_RINGTONE:
-                    FileHelper.getSong(new File(fileObject.path))
+                    subscriptions.add(FileHelper.getSong(new File(fileObject.path))
                             .subscribeOn(Schedulers.io())
                             .observeOn(AndroidSchedulers.mainThread())
-                            .subscribe(song -> ShuttleUtils.setRingtone(getContext(), song));
+                            .subscribe(song -> ShuttleUtils.setRingtone(getContext(), song),
+                                    error -> LogUtils.logException("FolderFragment: Error setting ringtone", error)));
                     return true;
                 case PLAY_NEXT:
-                    FileHelper.getSongList(new File(fileObject.path), false, false)
+                    subscriptions.add(FileHelper.getSongList(new File(fileObject.path), false, false)
                             .observeOn(AndroidSchedulers.mainThread())
-                            .subscribe(songs -> MusicUtils.playNext(getActivity(), songs));
+                            .subscribe(songs -> MusicUtils.playNext(getActivity(), songs),
+                                    error -> LogUtils.logException("FolderFragment: Error playing next", error)));
 
                     return true;
                 case PLAY_SELECTION:
                     final ProgressDialog progressDialog = ProgressDialog.show(getActivity(), "", getString(R.string.gathering_songs), false);
-                    FileHelper.getSongList(new File(fileObject.path), true, fileObject.fileType == FileType.FILE)
+                    subscriptions.add(FileHelper.getSongList(new File(fileObject.path), true, fileObject.fileType == FileType.FILE)
                             .observeOn(AndroidSchedulers.mainThread())
                             .subscribe(songs -> {
                                 MusicUtils.playAll(songs, 0, () -> {
@@ -705,7 +704,7 @@ public class FolderFragment extends BaseFragment implements
                                 if (isAdded() && progressDialog.isShowing()) {
                                     progressDialog.dismiss();
                                 }
-                            });
+                            }, error -> LogUtils.logException("FolderFragment: Error playing selection", error)));
                     return true;
                 case NEW_PLAYLIST:
                     List<BaseFileObject> fileObjects = new ArrayList<>();
@@ -714,9 +713,10 @@ public class FolderFragment extends BaseFragment implements
                     return true;
                 case PLAYLIST_SELECTED:
                     final Playlist playlist = (Playlist) item.getIntent().getSerializableExtra(ShuttleUtils.ARG_PLAYLIST);
-                    FileHelper.getSongList(new File(fileObject.path), true, false)
+                    subscriptions.add(FileHelper.getSongList(new File(fileObject.path), true, false)
                             .observeOn(AndroidSchedulers.mainThread())
-                            .subscribe(songs -> PlaylistUtils.addToPlaylist(getContext(), playlist, songs));
+                            .subscribe(songs -> PlaylistUtils.addToPlaylist(getContext(), playlist, songs),
+                                    error -> LogUtils.logException("FolderFragment: Error adding to playlist", error)));
 
                     return true;
                 case SET_INITIAL_DIR:
@@ -748,10 +748,7 @@ public class FolderFragment extends BaseFragment implements
                                 .negativeText(R.string.close)
                                 .show();
 
-                        FileHelper.getSongList(new File(fileObject.path), true, false)
-                                .map(songs -> Stream.of(songs)
-                                        .map(song -> song.path)
-                                        .collect(Collectors.toList()))
+                        subscriptions.add(FileHelper.getPathList(new File(fileObject.path), true, false)
                                 .observeOn(AndroidSchedulers.mainThread())
                                 .subscribe(paths -> {
                                     ViewUtils.fadeOut(indeterminateProgress, null);
@@ -772,7 +769,7 @@ public class FolderFragment extends BaseFragment implements
                                             }
                                         }
                                     });
-                                });
+                                }, error -> LogUtils.logException("FolderFragment: Error scanning paths", error)));
                     } else {
                         CustomMediaScanner.scanFiles(Collections.singletonList(fileObject.path), new CustomMediaScanner.ScanCompletionListener() {
                             @Override
@@ -797,12 +794,12 @@ public class FolderFragment extends BaseFragment implements
     }
 
     public ActionMode.Callback getActionModeCallback() {
-        if (mActionModeCallback == null) {
-            mActionModeCallback = new ActionMode.Callback() {
+        if (actionModeCallback == null) {
+            actionModeCallback = new ActionMode.Callback() {
                 @Override
                 public boolean onCreateActionMode(ActionMode mode, Menu menu) {
                     ThemeUtils.themeContextualActionBar(getActivity());
-                    mInActionMode = true;
+                    isInActionMode = true;
                     MenuInflater inflater = getActivity().getMenuInflater();
                     inflater.inflate(R.menu.menu_save_whitelist, menu);
                     return true;
@@ -820,7 +817,7 @@ public class FolderFragment extends BaseFragment implements
                             WhitelistHelper.deleteAllFolders();
                             WhitelistHelper.addToWhitelist(paths);
                             showCheckboxes(false);
-                            mAdapter.notifyDataSetChanged();
+                            adapter.notifyDataSetChanged();
                             mode.finish();
                             return true;
                     }
@@ -829,39 +826,39 @@ public class FolderFragment extends BaseFragment implements
 
                 @Override
                 public void onDestroyActionMode(ActionMode actionMode) {
-                    mInActionMode = false;
-                    mActionModeCallback = null;
+                    isInActionMode = false;
+                    actionModeCallback = null;
                     showCheckboxes(false);
-                    mAdapter.notifyDataSetChanged();
+                    adapter.notifyDataSetChanged();
                 }
             };
         }
-        return mActionModeCallback;
+        return actionModeCallback;
     }
 
     public void showCheckboxes(boolean show) {
 
-        mShowCheckboxes = show;
+        showCheckboxes = show;
 
-        List<AdaptableItem> folderViews = Stream.of(mAdapter.items)
+        List<AdaptableItem> folderViews = Stream.of(adapter.items)
                 .filter(adaptableItem -> adaptableItem instanceof FolderView)
                 .collect(Collectors.toList());
 
         for (AdaptableItem adaptableItem : folderViews) {
-            ((FolderView) adaptableItem).setShowCheckboxes(mShowCheckboxes);
-            mAdapter.notifyItemChanged(mAdapter.items.indexOf(adaptableItem));
+            ((FolderView) adaptableItem).setShowCheckboxes(showCheckboxes);
+            adapter.notifyItemChanged(adapter.items.indexOf(adaptableItem));
         }
     }
 
     public void changeBreadcrumbPath() {
 
-        List<AdaptableItem> breadcrumbViews = Stream.of(mAdapter.items)
+        List<AdaptableItem> breadcrumbViews = Stream.of(adapter.items)
                 .filter(adaptableItem -> adaptableItem instanceof BreadcrumbsView)
                 .collect(Collectors.toList());
 
         for (AdaptableItem adaptableItem : breadcrumbViews) {
-            ((BreadcrumbsView) adaptableItem).setBreadcrumbsPath(mCurrentDir);
-            mAdapter.notifyItemChanged(mAdapter.items.indexOf(adaptableItem));
+            ((BreadcrumbsView) adaptableItem).setBreadcrumbsPath(currentDir);
+            adapter.notifyItemChanged(adapter.items.indexOf(adaptableItem));
         }
     }
 
@@ -878,10 +875,10 @@ public class FolderFragment extends BaseFragment implements
                             .map(whitelistFolder -> whitelistFolder.folder)
                             .collect(Collectors.toList()));
 
-                    if (mShowCheckboxes) {
-                        mAdapter.notifyItemRangeChanged(0, mAdapter.getItemCount());
+                    if (showCheckboxes) {
+                        adapter.notifyItemRangeChanged(0, adapter.getItemCount());
                     }
-                });
+                }, error -> LogUtils.logException("FolderFragment: Error updating whitelist", error));
     }
 
     @Override

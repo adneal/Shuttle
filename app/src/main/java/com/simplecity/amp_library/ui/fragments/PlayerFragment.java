@@ -25,6 +25,7 @@ import com.jakewharton.rxbinding.widget.SeekBarProgressChangeEvent;
 import com.jakewharton.rxbinding.widget.SeekBarStartChangeEvent;
 import com.jakewharton.rxbinding.widget.SeekBarStopChangeEvent;
 import com.simplecity.amp_library.R;
+import com.simplecity.amp_library.lyrics.LyricsFragment;
 import com.simplecity.amp_library.model.Song;
 import com.simplecity.amp_library.playback.MusicService;
 import com.simplecity.amp_library.ui.activities.MainActivity;
@@ -35,6 +36,7 @@ import com.simplecity.amp_library.ui.views.RepeatingImageButton;
 import com.simplecity.amp_library.ui.views.SizableSeekBar;
 import com.simplecity.amp_library.utils.ColorUtils;
 import com.simplecity.amp_library.utils.DrawableUtils;
+import com.simplecity.amp_library.utils.LogUtils;
 import com.simplecity.amp_library.utils.MusicUtils;
 import com.simplecity.amp_library.utils.StringUtils;
 import com.simplecity.amp_library.utils.ThemeUtils;
@@ -249,13 +251,14 @@ public class PlayerFragment extends BaseFragment implements PlayerView {
             } else if (seekBarChangeEvent instanceof SeekBarStopChangeEvent) {
                 isSeeking = false;
             }
-        }));
+        }, error -> LogUtils.logException("PlayerFragment: Error in seek change event", error)));
 
         subscriptions.add(sharedSeekBarEvents
                 .ofType(SeekBarProgressChangeEvent.class)
                 .filter(SeekBarProgressChangeEvent::fromUser)
                 .debounce(15, TimeUnit.MILLISECONDS)
-                .subscribe(seekBarChangeEvent -> presenter.seekTo(seekBarChangeEvent.progress())));
+                .subscribe(seekBarChangeEvent -> presenter.seekTo(seekBarChangeEvent.progress()),
+                        error -> LogUtils.logException("PlayerFragment: Error receiving seekbar progress", error)));
     }
 
     @Override
@@ -496,10 +499,5 @@ public class PlayerFragment extends BaseFragment implements PlayerView {
         track.setText(song.name);
         track.setSelected(true);
         album.setText(String.format("%s | %s", song.artistName, song.albumName));
-
-        Fragment fragment = getChildFragmentManager().findFragmentById(R.id.main_container);
-        if (fragment != null && fragment instanceof LyricsFragment) {
-            ((LyricsFragment) fragment).updateLyrics();
-        }
     }
 }

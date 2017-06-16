@@ -73,6 +73,7 @@ import com.simplecity.amp_library.utils.ComparisonUtils;
 import com.simplecity.amp_library.utils.DataManager;
 import com.simplecity.amp_library.utils.DialogUtils;
 import com.simplecity.amp_library.utils.DrawableUtils;
+import com.simplecity.amp_library.utils.LogUtils;
 import com.simplecity.amp_library.utils.MenuUtils;
 import com.simplecity.amp_library.utils.MusicUtils;
 import com.simplecity.amp_library.utils.Operators;
@@ -264,7 +265,7 @@ public class DetailFragment extends BaseFragment implements
                         long songViewCount = Stream.of(adapter.items)
                                 .filter(adaptableItem -> adaptableItem instanceof SongView).count();
                         int offset = (int) (adapter.getItemCount() - songViewCount);
-                        if(to >= offset) {
+                        if (to >= offset) {
                             adapter.moveItem(from, to);
                         }
                     },
@@ -279,7 +280,7 @@ public class DetailFragment extends BaseFragment implements
                         to -= offset;
 
                         try {
-                                MediaStore.Audio.Playlists.Members.moveItem(getActivity().getContentResolver(), playlist.id, from, to);
+                            MediaStore.Audio.Playlists.Members.moveItem(getActivity().getContentResolver(), playlist.id, from, to);
                         } catch (IllegalArgumentException e) {
                             CrashlyticsCore.getInstance().log(String.format("Failed to move playlist item from %s to %s. Adapter count: %s. Error:%s", from, to, adapter.getItemCount(), e.getMessage()));
                         }
@@ -528,6 +529,7 @@ public class DetailFragment extends BaseFragment implements
                                         SongView songView = new SongView(song, multiSelector, requestManager);
                                         songView.setShowAlbumArt(false);
                                         songView.setEditable(canEdit());
+                                        songView.setShowPlayCount(playlist != null && playlist.type == Playlist.Type.MOST_PLAYED);
                                         songView.setShowTrackNumber(album != null && (songSort == SortManager.SongSort.DETAIL_DEFAULT || songSort == SortManager.SongSort.TRACK_NUMBER));
                                         return songView;
                                     })
@@ -609,7 +611,6 @@ public class DetailFragment extends BaseFragment implements
                                     slideShowObservable.unsubscribe();
                                 }
                                 slideShowObservable = Observable.interval(8, TimeUnit.SECONDS)
-                                        .onBackpressureDrop()
                                         .startWith(0L)
                                         .map(aLong -> {
                                             if (albums.isEmpty() || aLong == 0L && currentSlideShowAlbum != null) {
@@ -619,6 +620,7 @@ public class DetailFragment extends BaseFragment implements
                                             }
                                             return albums.get(new Random().nextInt(albums.size()));
                                         })
+                                        .onBackpressureDrop()
                                         .subscribeOn(Schedulers.io())
                                         .observeOn(AndroidSchedulers.mainThread())
                                         .subscribe(nextSlideShowAlbum -> {
@@ -641,7 +643,7 @@ public class DetailFragment extends BaseFragment implements
                                         });
                                 subscriptions.add(slideShowObservable);
                             }
-                        }));
+                        }, error -> LogUtils.logException("DetailFragment: Error refreshing adapter", error)));
             }
         });
     }

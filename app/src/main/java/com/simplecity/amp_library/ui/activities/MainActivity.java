@@ -57,6 +57,7 @@ import com.simplecity.amp_library.R;
 import com.simplecity.amp_library.ShuttleApplication;
 import com.simplecity.amp_library.constants.Config;
 import com.simplecity.amp_library.interfaces.BackPressListener;
+import com.simplecity.amp_library.lyrics.LyricsFragment;
 import com.simplecity.amp_library.model.Album;
 import com.simplecity.amp_library.model.AlbumArtist;
 import com.simplecity.amp_library.model.DrawerGroupItem;
@@ -87,6 +88,7 @@ import com.simplecity.amp_library.utils.AnalyticsManager;
 import com.simplecity.amp_library.utils.ColorUtils;
 import com.simplecity.amp_library.utils.DataManager;
 import com.simplecity.amp_library.utils.DialogUtils;
+import com.simplecity.amp_library.utils.LogUtils;
 import com.simplecity.amp_library.utils.MusicServiceConnectionUtils;
 import com.simplecity.amp_library.utils.MusicUtils;
 import com.simplecity.amp_library.utils.PlaylistUtils;
@@ -370,11 +372,13 @@ public class MainActivity extends BaseCastActivity implements
 
     private void showChangelogDialog() {
         int storedVersionCode = SettingsManager.getInstance().getStoredVersionCode();
+        int launchCount = SettingsManager.getInstance().getLaunchCount();
+
         // If we've stored a version code in the past, and it's lower than the current version code,
         // we can show the changelog.
         // Don't show the changelog for first time users.
-        // Todo: Re-comment this after v1.6.5-beta8 release.
-        if (/*storedVersionCode != -1 &&*/ storedVersionCode < BuildConfig.VERSION_CODE) {
+        // Todo: Remove launchCount check after 1.6.5 release.
+        if ((storedVersionCode != -1 || launchCount > 0) && storedVersionCode < BuildConfig.VERSION_CODE) {
             if (SettingsManager.getInstance().getShowChangelogOnLaunch()) {
                 DialogUtils.showChangelog(this);
             }
@@ -526,6 +530,7 @@ public class MainActivity extends BaseCastActivity implements
                 menu.findItem(R.id.menu_favorite).setVisible(false);
                 menu.findItem(R.id.menu_share).setVisible(false);
                 menu.findItem(R.id.menu_queue).setVisible(false);
+                menu.findItem(R.id.menu_lyrics).setVisible(false);
                 if (menu.findItem(GO_TO) != null) {
                     menu.findItem(GO_TO).setVisible(false);
                 }
@@ -534,6 +539,7 @@ public class MainActivity extends BaseCastActivity implements
             } else {
                 menu.findItem(R.id.action_search).setVisible(false);
                 menu.findItem(R.id.menu_favorite).setVisible(true);
+                menu.findItem(R.id.menu_lyrics).setVisible(true);
                 menu.findItem(R.id.menu_share).setVisible(true);
                 if (!ShuttleUtils.isTablet() && ShuttleUtils.isLandscape()) {
                     menu.findItem(R.id.menu_queue).setVisible(true);
@@ -582,7 +588,7 @@ public class MainActivity extends BaseCastActivity implements
                             }
                         }
                     }
-                });
+                }, error -> LogUtils.logException("MainActivity: Error preparing favourites menu", error));
 
         MenuItem whiteListItem = menu.findItem(R.id.whitelist);
         MenuItem sortingItem = menu.findItem(R.id.sort);
@@ -712,6 +718,17 @@ public class MainActivity extends BaseCastActivity implements
                     ((PlayerFragment) playingFragment).toggleQueue();
                 }
                 return true;
+            case R.id.menu_lyrics:
+                playingFragment = getSupportFragmentManager().findFragmentById(R.id.player_container);
+                if (playingFragment != null) {
+                    Fragment fragment = playingFragment.getChildFragmentManager().findFragmentById(R.id.main_container);
+                    if (fragment instanceof LyricsFragment)
+                        ((LyricsFragment) fragment).remove();
+                    else
+                        ((PlayerFragment) playingFragment).toggleLyrics();
+
+                }
+                return true;
             case android.R.id.home:
                 playingFragment = getSupportFragmentManager().findFragmentById(R.id.player_container);
                 if (playingFragment != null) {
@@ -771,6 +788,11 @@ public class MainActivity extends BaseCastActivity implements
 
     @Override
     public void onBackPressed() {
+
+        if (mNavigationDrawerFragment.isDrawerOpen()) {
+            mDrawerLayout.closeDrawers();
+            return;
+        }
 
         Fragment playingFragment = getSupportFragmentManager().findFragmentById(R.id.player_container);
         if (playingFragment != null) {

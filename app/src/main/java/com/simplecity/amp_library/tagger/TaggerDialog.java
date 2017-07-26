@@ -18,12 +18,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.FrameLayout;
-import android.widget.ScrollView;
 import android.widget.Toast;
 
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
-import com.annimon.stream.Collectors;
 import com.annimon.stream.Stream;
 import com.simplecity.amp_library.R;
 import com.simplecity.amp_library.ShuttleApplication;
@@ -34,7 +32,6 @@ import com.simplecity.amp_library.utils.CustomMediaScanner;
 import com.simplecity.amp_library.utils.DialogUtils;
 import com.simplecity.amp_library.utils.SettingsManager;
 import com.simplecity.amp_library.utils.ShuttleUtils;
-import com.simplecity.amp_library.utils.ThemeUtils;
 
 import org.jaudiotagger.audio.AudioFile;
 import org.jaudiotagger.audio.AudioFileIO;
@@ -132,7 +129,7 @@ public class TaggerDialog extends DialogFragment {
 
             originalSongPaths = Stream.of(albumArtist.albums)
                     .flatMap(value -> Stream.of(value.paths))
-                    .collect(Collectors.toList());
+                    .toList();
             showAlbum = false;
             showTrack = false;
         } else if (model instanceof Album) {
@@ -180,50 +177,35 @@ public class TaggerDialog extends DialogFragment {
 
     private void setupViews(View rootView) {
 
-        ScrollView scrollView = (ScrollView) rootView.findViewById(R.id.scrollview);
-        ThemeUtils.themeScrollView(scrollView);
-
         titleEditText = (EditText) rootView.findViewById(R.id.new_track_name);
         titleInputLayout = getParent(titleEditText);
-        ThemeUtils.themeEditText(titleEditText);
 
         albumEditText = (EditText) rootView.findViewById(R.id.new_album_name);
         albumInputLayout = getParent(albumEditText);
-        ThemeUtils.themeEditText(albumEditText);
 
         artistEditText = (EditText) rootView.findViewById(R.id.new_artist_name);
-        ThemeUtils.themeEditText(artistEditText);
 
         albumArtistEditText = (EditText) rootView.findViewById(R.id.new_album_artist_name);
-        ThemeUtils.themeEditText(albumArtistEditText);
 
         genreEditText = (EditText) rootView.findViewById(R.id.new_genre_name);
-        ThemeUtils.themeEditText(genreEditText);
 
         yearEditText = (EditText) rootView.findViewById(R.id.new_year_number);
-        ThemeUtils.themeEditText(yearEditText);
 
         trackEditText = (EditText) rootView.findViewById(R.id.new_track_number);
         trackInputLayout = getParent(trackEditText);
-        ThemeUtils.themeEditText(trackEditText);
 
         trackTotalEditText = (EditText) rootView.findViewById(R.id.new_track_total);
-        ThemeUtils.themeEditText(trackTotalEditText);
 
         discEditText = (EditText) rootView.findViewById(R.id.new_disc_number);
         discInputLayout = getParent(discEditText);
-        ThemeUtils.themeEditText(discEditText);
 
         discTotalEditText = (EditText) rootView.findViewById(R.id.new_disc_total);
-        ThemeUtils.themeEditText(discTotalEditText);
 
         lyricsEditText = (EditText) rootView.findViewById(R.id.new_lyrics);
         lyricsInputLayout = getParent(lyricsEditText);
-        ThemeUtils.themeEditText(lyricsEditText);
 
         commentEditText = (EditText) rootView.findViewById(R.id.new_comment);
         commentInputLayout = getParent(commentEditText);
-        ThemeUtils.themeEditText(commentEditText);
 
         if (albumArtist != null || album != null) {
             titleInputLayout.setVisibility(View.GONE);
@@ -275,10 +257,26 @@ public class TaggerDialog extends DialogFragment {
             } catch (UnsupportedOperationException ignored) {
 
             }
-            disc = tag.getFirst(FieldKey.DISC_NO);
-            discTotal = tag.getFirst(FieldKey.DISC_TOTAL);
-            lyrics = tag.getFirst(FieldKey.LYRICS);
-            comment = tag.getFirst(FieldKey.COMMENT);
+            try {
+                disc = tag.getFirst(FieldKey.DISC_NO);
+            } catch (UnsupportedOperationException ignored) {
+
+            }
+            try {
+                discTotal = tag.getFirst(FieldKey.DISC_TOTAL);
+            } catch (UnsupportedOperationException ignored) {
+
+            }
+            try {
+                lyrics = tag.getFirst(FieldKey.LYRICS);
+            } catch (UnsupportedOperationException ignored) {
+
+            }
+            try {
+                comment = tag.getFirst(FieldKey.COMMENT);
+            } catch (UnsupportedOperationException ignored) {
+
+            }
 
         } catch (IOException | InvalidAudioFrameException | TagException | ReadOnlyFileException | CannotReadException e) {
             Log.e(TAG, "Failed to read tags. " + e.toString());
@@ -344,7 +342,9 @@ public class TaggerDialog extends DialogFragment {
         CheckDocumentPermissionsTask task = new CheckDocumentPermissionsTask(
                 originalSongPaths, documentFiles, hasPermission -> {
 
-            progressDialog.dismiss();
+            if (isResumed() && progressDialog.isShowing()) {
+                progressDialog.dismiss();
+            }
 
             if (hasPermission) {
 

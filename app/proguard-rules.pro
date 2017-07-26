@@ -23,7 +23,7 @@
 -keep class !android.support.v7.internal.view.menu.**,android.support.** {*;}
 
 # Custom MediaRouteActionProvider, referenced via menu action view class
--keep class com.simplecity.amp_library.ui.views.MyMediaRouteActionProvider { *; }
+-keep class com.simplecity.amp_library.ui.views.CustomMediaRouteActionProvider { *; }
 
 # Custom Switch, referenced via menu action view class
 -keep class com.simplecity.amp_library.ui.views.CustomSwitch { *; }
@@ -41,9 +41,6 @@
 # JAudioTagger
 -dontwarn org.jaudiotagger.**
 -keep class org.jaudiotagger.** { *; }
-
-# RetroLambda
--dontwarn java.lang.invoke.*
 
 # OkHttp
 -keepattributes Signature
@@ -103,3 +100,10 @@
 # Hide an annoying compilation warning
 # http://stackoverflow.com/questions/3308010/what-is-the-ignoring-innerclasses-attribute-warning-output-during-compilation
 -keepattributes EnclosingMethod
+
+# Retrolambda
+-dontwarn java.lang.invoke.*
+-dontwarn **$$Lambda$*
+
+# Keep MaterialDialogs ThemeSingleton, so we can access it via reflection, from Aesthetic
+-keep class com.afollestad.materialdialogs.internal.** { *; }

@@ -1,6 +1,6 @@
 package com.simplecity.amp_library.ui.fragments;
 
-import android.app.Activity;
+import android.content.Context;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.view.LayoutInflater;
@@ -43,8 +43,8 @@ public class WidgetFragment extends BaseFragment {
     }
 
     @Override
-    public void onAttach(Activity activity) {
-        super.onAttach(activity);
+    public void onAttach(Context context) {
+        super.onAttach(context);
 
         mWidgetLayoutResId = getArguments().getInt(ARG_WIDGET_LAYOUT_ID);
     }
@@ -76,7 +76,7 @@ public class WidgetFragment extends BaseFragment {
             layoutParams = new FrameLayout.LayoutParams((int) width, (int) height);
         }
 
-        FrameLayout frameLayout1 = (FrameLayout) rootView.findViewById(R.id.frame);
+        FrameLayout frameLayout1 = rootView.findViewById(R.id.frame);
 
         if (layoutParams != null) {
             frameLayout1.addView(frameLayout, layoutParams);

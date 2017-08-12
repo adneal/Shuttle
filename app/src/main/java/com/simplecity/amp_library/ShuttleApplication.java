@@ -84,7 +84,7 @@ public class ShuttleApplication extends Application {
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
 
-        if (BuildConfig.MULTIDEX_ENABLED) {
+        if (BuildConfig.FLAVOR.equals("dev")) {
             MultiDex.install(base);
         }
     }
@@ -119,7 +119,7 @@ public class ShuttleApplication extends Application {
 
         //Firebase Analytics
         FirebaseAnalytics.getInstance(this);
-        
+
         VideoCastManager.initialize(this,
                 new CastConfiguration.Builder(Config.CHROMECAST_APP_ID)
                         .enableLockScreen()
@@ -341,7 +341,6 @@ public class ShuttleApplication extends Application {
         // will start throwing CursorWindow exceptions, and the queries will slow down massively. This ends up making all queries slow.
         // This task isn't time critical, so we can afford to let it just casually do its job.
         return SqlBriteUtils.createSingleList(ShuttleApplication.getInstance(), Genre::new, Genre.getQuery())
-                .doOnSuccess(genres -> Log.i(TAG, "Generated genres: " + genres.size()))
                 .flatMapObservable(Observable::fromIterable)
                 .concatMap(genre -> Observable.just(genre).delay(250, TimeUnit.MILLISECONDS))
                 .flatMapSingle(genre -> genre.getSongsObservable()

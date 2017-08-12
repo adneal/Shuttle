@@ -1,5 +1,6 @@
 package com.simplecity.amp_library.utils;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.PopupMenu;
@@ -101,6 +102,10 @@ public class MenuUtils implements MusicUtils.Defs {
                 .show();
     }
 
+    public static void remove(Song song) {
+        MusicUtils.removeFromQueue(song, true);
+    }
+
     public static void setupSongMenu(Context context, PopupMenu menu, boolean showRemoveButton) {
         menu.inflate(R.menu.menu_song);
 
@@ -137,7 +142,7 @@ public class MenuUtils implements MusicUtils.Defs {
         };
     }
 
-    public static PopupMenu.OnMenuItemClickListener getSongMenuClickListener(Context context, Song song, UnsafeConsumer<TaggerDialog> tagEditorCallback) {
+    public static PopupMenu.OnMenuItemClickListener getSongMenuClickListener(Context context, Song song, UnsafeConsumer<TaggerDialog> tagEditorCallback, @Nullable UnsafeAction songRemoved) {
         return item -> {
             switch (item.getItemId()) {
                 case R.id.playNext:
@@ -169,6 +174,12 @@ public class MenuUtils implements MusicUtils.Defs {
                     return true;
                 case R.id.delete:
                     delete(context, Collections.singletonList(song));
+                    return true;
+                case R.id.remove:
+                    if (songRemoved != null) {
+                        songRemoved.run();
+                    }
+                    remove(song);
                     return true;
             }
             return false;
@@ -575,7 +586,10 @@ public class MenuUtils implements MusicUtils.Defs {
     }
 
     public static void renameFile(Context context, BaseFileObject fileObject, UnsafeAction filenameChanged) {
+
+        @SuppressLint("InflateParams")
         View customView = LayoutInflater.from(context).inflate(R.layout.dialog_rename, null);
+
         final EditText editText = customView.findViewById(R.id.editText);
         editText.setText(fileObject.name);
 

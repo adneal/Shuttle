@@ -90,8 +90,8 @@ public class BreadcrumbView extends RelativeLayout implements Breadcrumb, OnClic
         addView(inflate(getContext(), R.layout.breadcrumb_view, null));
 
         //Recover all views
-        this.mScrollView = (HorizontalScrollView) findViewById(R.id.breadcrumb_scrollview);
-        this.mBreadcrumbBar = (ViewGroup) findViewById(R.id.breadcrumb);
+        this.mScrollView = findViewById(R.id.breadcrumb_scrollview);
+        this.mBreadcrumbBar = findViewById(R.id.breadcrumb);
 
     }
 
@@ -99,13 +99,13 @@ public class BreadcrumbView extends RelativeLayout implements Breadcrumb, OnClic
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
 
-        Aesthetic.get()
+        Aesthetic.get(getContext())
                 .colorPrimary()
                 .take(1)
                 .subscribe(color -> ViewBackgroundAction.create(this)
                         .accept(color), onErrorLogAndRethrow());
 
-        aestheticDisposable = (Aesthetic.get()
+        aestheticDisposable = (Aesthetic.get(getContext())
                 .colorPrimary()
                 .compose(distinctToMainThread())
                 .subscribe(color -> ViewBackgroundAction.create(this)

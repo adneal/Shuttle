@@ -1,5 +1,6 @@
 package com.simplecity.amp_library.ui.dialog;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -22,16 +23,18 @@ public class ChangelogDialog {
     }
 
     public static MaterialDialog getChangelogDialog(Context context) {
+
+        @SuppressLint("InflateParams")
         View customView = LayoutInflater.from(context).inflate(R.layout.dialog_changelog, null);
 
-        WebView webView = (WebView) customView.findViewById(R.id.webView);
+        WebView webView = customView.findViewById(R.id.webView);
         webView.setBackgroundColor(context.getResources().getColor(android.R.color.transparent));
 
-        CheckBox checkBox = (CheckBox) customView.findViewById(R.id.checkbox);
+        CheckBox checkBox = customView.findViewById(R.id.checkbox);
         checkBox.setChecked(SettingsManager.getInstance().getShowChangelogOnLaunch());
         checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> SettingsManager.getInstance().setShowChangelogOnLaunch(isChecked));
 
-        ProgressBar progressBar = (ProgressBar) customView.findViewById(R.id.progress);
+        ProgressBar progressBar = customView.findViewById(R.id.progress);
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -43,7 +46,7 @@ public class ChangelogDialog {
             }
         });
 
-        Aesthetic.get()
+        Aesthetic.get(context)
                 .isDark()
                 .take(1)
                 .subscribe(isDark -> webView.loadUrl(isDark ? "file:///android_asset/web/info_dark.html" : "file:///android_asset/web/info.html"));

@@ -2,7 +2,6 @@ package com.simplecity.amp_library.ui.modelviews;
 
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 
 import com.bumptech.glide.Glide;
@@ -48,28 +47,25 @@ public class QueuePagerItemView extends BaseViewModel<QueuePagerItemView.ViewHol
                 .load(song)
                 .diskCacheStrategy(DiskCacheStrategy.SOURCE)
                 .error(PlaceholderProvider.getInstance().getPlaceHolderDrawable(song.name, true))
-                .into((ImageView) holder.itemView);
-
-        holder.itemView.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
-            @Override
-            public boolean onPreDraw() {
-                holder.itemView.getViewTreeObserver().removeOnPreDrawListener(this);
-                return false;
-            }
-        });
+                .into((ImageView) holder.imageView);
     }
 
     public static class ViewHolder extends BaseViewHolder<QueuePagerItemView> {
 
+        private ImageView imageView;
+
         public ViewHolder(View itemView) {
             super(itemView);
+
+            imageView = itemView.findViewById(R.id.imageView);
         }
 
         @Override
         public void recycle() {
             super.recycle();
 
-            Glide.clear(itemView);
+
+            Glide.clear(imageView);
         }
     }
 

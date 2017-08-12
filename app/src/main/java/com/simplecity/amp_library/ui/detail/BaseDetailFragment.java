@@ -160,8 +160,12 @@ public abstract class BaseDetailFragment extends BaseFragment implements
         unbinder = ButterKnife.bind(this, rootView);
 
         toolbar.setNavigationOnClickListener(v -> getNavigationController().popViewController());
-        toolbar.getLayoutParams().height = (int) (ActionBarUtils.getActionBarHeight(getContext()) + ActionBarUtils.getStatusBarHeight(getContext()));
-        toolbar.setPadding(toolbar.getPaddingLeft(), (int) (toolbar.getPaddingTop() + ActionBarUtils.getStatusBarHeight(getContext())), toolbar.getPaddingRight(), toolbar.getPaddingBottom());
+
+        if (ShuttleUtils.canDrawBehindStatusBar()) {
+            toolbar.getLayoutParams().height = (int) (ActionBarUtils.getActionBarHeight(getContext()) + ActionBarUtils.getStatusBarHeight(getContext()));
+            toolbar.setPadding(toolbar.getPaddingLeft(), (int) (toolbar.getPaddingTop() + ActionBarUtils.getStatusBarHeight(getContext())), toolbar.getPaddingRight(), toolbar.getPaddingBottom());
+        }
+
         setupToolbarMenu(toolbar);
 
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
@@ -186,7 +190,7 @@ public abstract class BaseDetailFragment extends BaseFragment implements
 
         loadBackgroundImage();
 
-        Aesthetic.get()
+        Aesthetic.get(getContext())
                 .colorPrimary()
                 .take(1)
                 .subscribe(primaryColor -> {
@@ -194,7 +198,7 @@ public abstract class BaseDetailFragment extends BaseFragment implements
                     toolbarLayout.setBackgroundColor(primaryColor);
                 });
 
-        disposables.add(Aesthetic.get()
+        disposables.add(Aesthetic.get(getContext())
                 .colorPrimary()
                 .compose(distinctToMainThread())
                 .subscribe(primaryColor -> {
@@ -735,8 +739,9 @@ public abstract class BaseDetailFragment extends BaseFragment implements
     public void onSongOverflowClick(int position, View v, Song song) {
         PopupMenu popupMenu = new PopupMenu(getContext(), v);
         MenuUtils.setupSongMenu(getContext(), popupMenu, false);
-        popupMenu.setOnMenuItemClickListener(MenuUtils.getSongMenuClickListener(getContext(), song, taggerDialog
-                -> taggerDialog.show(getFragmentManager())));
+        popupMenu.setOnMenuItemClickListener(MenuUtils.getSongMenuClickListener(getContext(), song,
+                taggerDialog -> taggerDialog.show(getFragmentManager()),
+                null));
         popupMenu.show();
     }
 

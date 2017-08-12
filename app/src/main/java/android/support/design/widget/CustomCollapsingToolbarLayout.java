@@ -187,13 +187,7 @@ public class CustomCollapsingToolbarLayout extends FrameLayout {
         setWillNotDraw(false);
 
         ViewCompat.setOnApplyWindowInsetsListener(this,
-                new android.support.v4.view.OnApplyWindowInsetsListener() {
-                    @Override
-                    public WindowInsetsCompat onApplyWindowInsets(View v,
-                                                                  WindowInsetsCompat insets) {
-                        return onWindowInsetChanged(insets);
-                    }
-                });
+                (v, insets) -> onWindowInsetChanged(insets));
     }
 
     private static int getHeightWithMargins(@NonNull final View view) {
@@ -328,7 +322,7 @@ public class CustomCollapsingToolbarLayout extends FrameLayout {
 
         if (mToolbarId != -1) {
             // If we have an ID set, try and find it and it's direct parent to us
-            mToolbar = (Toolbar) findViewById(mToolbarId);
+            mToolbar = findViewById(mToolbarId);
             if (mToolbar != null) {
                 mToolbarDirectChild = findDirectChild(mToolbar);
             }
@@ -572,12 +566,7 @@ public class CustomCollapsingToolbarLayout extends FrameLayout {
                     targetAlpha > mScrimAlpha
                             ? AnimationUtils.FAST_OUT_LINEAR_IN_INTERPOLATOR
                             : AnimationUtils.LINEAR_OUT_SLOW_IN_INTERPOLATOR);
-            mScrimAnimator.addUpdateListener(new ValueAnimatorCompat.AnimatorUpdateListener() {
-                @Override
-                public void onAnimationUpdate(ValueAnimatorCompat animator) {
-                    setScrimAlpha(animator.getAnimatedIntValue());
-                }
-            });
+            mScrimAnimator.addUpdateListener(animator -> setScrimAlpha(animator.getAnimatedIntValue()));
         } else if (mScrimAnimator.isRunning()) {
             mScrimAnimator.cancel();
         }

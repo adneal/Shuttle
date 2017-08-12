@@ -165,7 +165,7 @@ public class DrawerFragment extends BaseFragment implements
     public void onResume() {
         super.onResume();
 
-        disposables.add(Aesthetic.get()
+        disposables.add(Aesthetic.get(getContext())
                 .colorPrimary()
                 .compose(Rx.distinctToMainThread())
                 .subscribe(color -> backgroundPlaceholder.setColorFilter(color, PorterDuff.Mode.MULTIPLY)));
@@ -207,6 +207,11 @@ public class DrawerFragment extends BaseFragment implements
         drawerPresenter.unbindView(this);
         playerPresenter.unbindView(playerViewAdapter);
         unbinder.unbind();
+
+        Stream.of(drawerParents)
+                .filter(parent -> parent instanceof DrawerParent)
+                .forEach(parent -> ((DrawerParent) parent).setListener(null));
+
         super.onDestroyView();
     }
 

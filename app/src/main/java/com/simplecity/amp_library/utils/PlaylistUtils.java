@@ -1,5 +1,6 @@
 package com.simplecity.amp_library.utils;
 
+import android.annotation.SuppressLint;
 import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.ContentResolver;
@@ -118,9 +119,7 @@ public class PlaylistUtils {
                 .sort(MediaStore.Audio.Playlists.NAME)
                 .build();
 
-        return SqlBriteUtils.createSingle(context, cursor -> {
-            return cursor.getInt(0);
-        }, query, -1)
+        return SqlBriteUtils.createSingle(context, cursor -> cursor.getInt(0), query, -1)
                 .doOnSuccess(id -> Log.i(TAG, "Playlist id: " + id))
                 .doOnError(throwable -> Log.i(TAG, "Playlist error: " + throwable.toString()));
     }
@@ -291,10 +290,11 @@ public class PlaylistUtils {
 
                         if (!duplicates.isEmpty()) {
 
+                            @SuppressLint("InflateParams")
                             View customView = LayoutInflater.from(context).inflate(R.layout.dialog_playlist_duplicates, null);
-                            TextView messageText = (TextView) customView.findViewById(R.id.textView);
-                            CheckBox applyToAll = (CheckBox) customView.findViewById(R.id.applyToAll);
-                            CheckBox alwaysAdd = (CheckBox) customView.findViewById(R.id.alwaysAdd);
+                            TextView messageText = customView.findViewById(R.id.textView);
+                            CheckBox applyToAll = customView.findViewById(R.id.applyToAll);
+                            CheckBox alwaysAdd = customView.findViewById(R.id.alwaysAdd);
 
                             if (duplicates.size() <= 1) {
                                 applyToAll.setVisibility(View.GONE);
@@ -536,8 +536,9 @@ public class PlaylistUtils {
 
     private static void createPlaylistDialog(final Context context, final OnSavePlaylistListener listener) {
 
+        @SuppressLint("InflateParams")
         View customView = LayoutInflater.from(context).inflate(R.layout.dialog_playlist, null);
-        final EditText editText = (EditText) customView.findViewById(R.id.editText);
+        final EditText editText = customView.findViewById(R.id.editText);
 
         Observable.fromCallable(() -> makePlaylistName(context))
                 .subscribeOn(Schedulers.io())
@@ -622,8 +623,9 @@ public class PlaylistUtils {
 
     public static void renamePlaylistDialog(final Context context, final Playlist playlist) {
 
+        @SuppressLint("InflateParams")
         View customView = LayoutInflater.from(context).inflate(R.layout.dialog_playlist, null);
-        final EditText editText = (EditText) customView.findViewById(R.id.editText);
+        final EditText editText = customView.findViewById(R.id.editText);
         editText.setText(playlist.name);
 
         MaterialDialog.Builder builder = DialogUtils.getBuilder(context)

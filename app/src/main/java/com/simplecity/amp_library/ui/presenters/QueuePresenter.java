@@ -71,7 +71,7 @@ public class QueuePresenter extends Presenter<QueueView> {
                     if (action != null) {
                         switch (action) {
                             case MusicService.InternalIntents.META_CHANGED:
-                                queueView.updateQueuePosition(MusicUtils.getQueuePosition());
+                                queueView.updateQueuePosition(MusicUtils.getQueuePosition(), false);
                                 break;
 
                             case MusicService.InternalIntents.QUEUE_CHANGED:
@@ -103,18 +103,28 @@ public class QueuePresenter extends Presenter<QueueView> {
     }
 
     public void removeFromQueue(int position, Song song) {
-        MusicUtils.removeFromQueue(song, true);
         QueueView queueView = getView();
         if (queueView != null) {
             queueView.removeFromQueue(position);
         }
+        MusicUtils.removeFromQueue(position);
+    }
+
+    private void playNext(int position) {
+        int newPosition = MusicUtils.getQueuePosition() + 1;
+
+        QueueView queueView = getView();
+        if (queueView != null) {
+            queueView.moveQueueItem(position, newPosition);
+        }
+
+        MusicUtils.moveQueueItem(position, newPosition);
     }
 
     private void loadData() {
         QueueView queueView = getView();
         data = Stream.of(MusicUtils.getQueue())
                 .map(song -> {
-
                     // Look for an existing SongView wrapping the song, we'll reuse it if it exists.
                     SongView songView = (SongView) Stream.of(data)
                             .filter(viewModel -> viewModel instanceof SongView && (((SongView) viewModel).song.equals(song)))
@@ -143,7 +153,7 @@ public class QueuePresenter extends Presenter<QueueView> {
                 MusicUtils.setQueuePosition(position);
                 QueueView queueView = getView();
                 if (queueView != null) {
-                    queueView.setCurrentQueueItem(position);
+                    queueView.updateQueuePosition(position, true);
                 }
             }
         }
@@ -156,7 +166,7 @@ public class QueuePresenter extends Presenter<QueueView> {
         @Override
         public void onSongOverflowClick(int position, View v, Song song) {
             PopupMenu menu = new PopupMenu(v.getContext(), v);
-            MenuUtils.setupSongMenu(v.getContext(), menu, true);
+            MenuUtils.setupSongMenu(menu, true);
             menu.setOnMenuItemClickListener(MenuUtils.getSongMenuClickListener(v.getContext(), song,
                     taggerDialog -> {
                         QueueView queueView = getView();
@@ -164,7 +174,8 @@ public class QueuePresenter extends Presenter<QueueView> {
                             queueView.showTaggerDialog(taggerDialog);
                         }
                     },
-                    () -> removeFromQueue(position, song)));
+                    () -> removeFromQueue(position, song),
+                    () -> playNext(position)));
             menu.show();
         }
 

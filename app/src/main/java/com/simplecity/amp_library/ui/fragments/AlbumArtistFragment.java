@@ -37,6 +37,7 @@ import com.simplecity.amp_library.utils.SettingsManager;
 import com.simplecity.amp_library.utils.SortManager;
 import com.simplecityapps.recycler_adapter.model.ViewModel;
 import com.simplecityapps.recycler_adapter.recyclerview.RecyclerListener;
+import com.simplecityapps.recycler_adapter.recyclerview.SpanSizeLookup;
 import com.simplecityapps.recyclerview_fastscroll.views.FastScrollRecyclerView;
 
 import java.util.Collections;
@@ -70,7 +71,9 @@ public class AlbumArtistFragment extends BaseFragment implements
 
     private GridLayoutManager layoutManager;
 
-    SectionedAdapter adapter;
+    private SectionedAdapter adapter;
+
+    private SpanSizeLookup spanSizeLookup;
 
     private boolean sortOrderChanged = false;
 
@@ -116,23 +119,21 @@ public class AlbumArtistFragment extends BaseFragment implements
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
 
-        int spanCount = SettingsManager.getInstance().getArtistColumnCount(getResources());
-        layoutManager = new GridLayoutManager(getContext(), spanCount);
-        layoutManager.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
-            @Override
-            public int getSpanSize(int position) {
-                if (adapter.items.get(position) instanceof EmptyView) {
-                    return spanCount;
-                }
-                return 1;
-            }
-        });
+        if (recyclerView == null) {
+            int spanCount = SettingsManager.getInstance().getArtistColumnCount(getResources());
+            layoutManager = new GridLayoutManager(getContext(), spanCount);
+            spanSizeLookup = new SpanSizeLookup(adapter, spanCount);
+            spanSizeLookup.setSpanIndexCacheEnabled(true);
+            layoutManager.setSpanSizeLookup(spanSizeLookup);
 
-        recyclerView = (FastScrollRecyclerView) inflater.inflate(R.layout.fragment_recycler, container, false);
-        recyclerView.setLayoutManager(layoutManager);
-        recyclerView.addItemDecoration(new GridDividerDecoration(getResources(), 4, true));
-        recyclerView.setRecyclerListener(new RecyclerListener());
-        recyclerView.setAdapter(adapter);
+            recyclerView = (FastScrollRecyclerView) inflater.inflate(R.layout.fragment_recycler, container, false);
+            recyclerView.setLayoutManager(layoutManager);
+            recyclerView.addItemDecoration(new GridDividerDecoration(getResources(), 4, true));
+            recyclerView.setRecyclerListener(new RecyclerListener());
+        }
+        if (recyclerView.getAdapter() != adapter) {
+            recyclerView.setAdapter(adapter);
+        }
 
         return recyclerView;
     }
@@ -151,15 +152,14 @@ public class AlbumArtistFragment extends BaseFragment implements
     public void onResume() {
         super.onResume();
 
-        refreshAdapterItems();
+        refreshAdapterItems(false);
 
         if (getUserVisibleHint()) {
             setupContextualToolbar();
         }
     }
 
-    void refreshAdapterItems() {
-
+    void refreshAdapterItems(boolean force) {
         PermissionUtils.RequestStoragePermissions(() -> {
             if (getActivity() != null && isAdded()) {
 
@@ -168,6 +168,7 @@ public class AlbumArtistFragment extends BaseFragment implements
                 boolean ascending = SortManager.getInstance().getArtistsAscending();
 
                 disposable = DataManager.getInstance().getAlbumArtistsRelay()
+                        .skipWhile(albumArtists -> !force && adapter.items.size() == albumArtists.size())
                         .flatMapSingle(albumArtists -> {
                             //Sort
                             SortManager.getInstance().sortAlbumArtists(albumArtists);
@@ -183,7 +184,6 @@ public class AlbumArtistFragment extends BaseFragment implements
                                                 .filter(viewModel -> viewModel instanceof AlbumArtistView && (((AlbumArtistView) viewModel).albumArtist.equals(albumArtist)))
                                                 .findFirst()
                                                 .orElse(null);
-
 
                                         if (albumArtistView == null) {
                                             albumArtistView = new AlbumArtistView(albumArtist, artistDisplayType, requestManager);
@@ -223,9 +223,10 @@ public class AlbumArtistFragment extends BaseFragment implements
 
         menu.addSubMenu(0, MENU_GRID_SIZE, 0, R.string.menu_grid_size);
         SubMenu subMenu = menu.findItem(MENU_GRID_SIZE).getSubMenu();
-        int[] columnRange = getResources().getIntArray(R.array.column_range);
-        for (int i = 0; i < columnRange.length; i++) {
-            subMenu.add(MENU_GROUP_GRID, columnRange[i] + 1000, i, String.valueOf(columnRange[i]));
+
+        int[] spanCountArray = getResources().getIntArray(R.array.span_count);
+        for (int i = 0; i < spanCountArray.length; i++) {
+            subMenu.add(MENU_GROUP_GRID, spanCountArray[i], i, String.valueOf(spanCountArray[i]));
         }
         subMenu.setGroupCheckable(MENU_GROUP_GRID, true, true);
     }
@@ -290,8 +291,9 @@ public class AlbumArtistFragment extends BaseFragment implements
             gridMenuItem.setVisible(false);
         } else {
             gridMenuItem.setVisible(true);
-            int columnCount = SettingsManager.getInstance().getArtistColumnCount(getResources());
-            gridMenuItem.getSubMenu().findItem(columnCount + 1000).setChecked(true);
+            gridMenuItem.getSubMenu()
+                    .findItem(SettingsManager.getInstance().getArtistColumnCount(getResources()))
+                    .setChecked(true);
         }
     }
 
@@ -302,56 +304,66 @@ public class AlbumArtistFragment extends BaseFragment implements
             case R.id.sort_default:
                 SortManager.getInstance().setArtistsSortOrder(SortManager.ArtistSort.DEFAULT);
                 sortOrderChanged = true;
-                refreshAdapterItems();
+                refreshAdapterItems(true);
                 break;
             case R.id.sort_artist_name:
                 SortManager.getInstance().setArtistsSortOrder(SortManager.ArtistSort.NAME);
                 sortOrderChanged = true;
-                refreshAdapterItems();
+                refreshAdapterItems(true);
                 break;
             case R.id.sort_ascending:
                 SortManager.getInstance().setArtistsAscending(!item.isChecked());
                 sortOrderChanged = true;
-                refreshAdapterItems();
+                refreshAdapterItems(true);
                 break;
             case R.id.view_as_list:
                 int viewType = ViewType.ARTIST_LIST;
                 SettingsManager.getInstance().setArtistDisplayType(viewType);
-                layoutManager.setSpanCount(getResources().getInteger(R.integer.list_num_columns));
+                setupListSpan();
                 updateViewType(viewType);
                 break;
             case R.id.view_as_grid:
                 viewType = ViewType.ARTIST_GRID;
                 SettingsManager.getInstance().setArtistDisplayType(viewType);
-                layoutManager.setSpanCount(SettingsManager.getInstance().getArtistColumnCount(getResources()));
+                setupGridSpan();
                 updateViewType(viewType);
                 break;
             case R.id.view_as_grid_card:
                 viewType = ViewType.ARTIST_CARD;
                 SettingsManager.getInstance().setArtistDisplayType(viewType);
-                layoutManager.setSpanCount(SettingsManager.getInstance().getArtistColumnCount(getResources()));
+                setupGridSpan();
                 updateViewType(viewType);
                 break;
             case R.id.view_as_grid_palette:
                 viewType = ViewType.ARTIST_PALETTE;
                 SettingsManager.getInstance().setArtistDisplayType(viewType);
-                layoutManager.setSpanCount(SettingsManager.getInstance().getArtistColumnCount(getResources()));
+                setupGridSpan();
                 updateViewType(viewType);
                 break;
         }
 
         if (item.getGroupId() == MENU_GROUP_GRID) {
-            SettingsManager.getInstance().setArtistColumnCount(item.getItemId() - 1000);
-
-            if (SettingsManager.getInstance().getArtistDisplayType() != ViewType.ARTIST_LIST) {
-                ((GridLayoutManager) recyclerView.getLayoutManager()).setSpanCount(SettingsManager.getInstance().getArtistColumnCount(getResources()));
-                adapter.notifyItemRangeChanged(0, adapter.getItemCount());
-            }
+            SettingsManager.getInstance().setArtistColumnCount(item.getItemId());
+            spanSizeLookup.setSpanCount(item.getItemId());
+            ((GridLayoutManager) recyclerView.getLayoutManager()).setSpanCount(SettingsManager.getInstance().getArtistColumnCount(getResources()));
+            adapter.notifyItemRangeChanged(0, adapter.getItemCount());
         }
 
-        getActivity().supportInvalidateOptionsMenu();
+        getActivity().invalidateOptionsMenu();
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private void setupGridSpan() {
+        int spanCount = SettingsManager.getInstance().getArtistColumnCount(getResources());
+        spanSizeLookup.setSpanCount(spanCount);
+        layoutManager.setSpanCount(spanCount);
+    }
+
+    private void setupListSpan() {
+        int spanCount = getResources().getInteger(R.integer.list_num_columns);
+        spanSizeLookup.setSpanCount(spanCount);
+        layoutManager.setSpanCount(spanCount);
     }
 
     void updateViewType(@ViewType int viewType) {
@@ -380,7 +392,7 @@ public class AlbumArtistFragment extends BaseFragment implements
         PopupMenu menu = new PopupMenu(AlbumArtistFragment.this.getActivity(), v);
         menu.inflate(R.menu.menu_artist);
         SubMenu sub = menu.getMenu().findItem(R.id.addToPlaylist).getSubMenu();
-        PlaylistUtils.makePlaylistMenu(getActivity(), sub);
+        PlaylistUtils.makePlaylistMenu(sub);
         menu.setOnMenuItemClickListener(MenuUtils.getAlbumArtistClickListener(getContext(), albumArtist, taggerDialog -> taggerDialog.show(getFragmentManager())));
         menu.show();
     }
@@ -403,7 +415,7 @@ public class AlbumArtistFragment extends BaseFragment implements
             contextualToolbar.getMenu().clear();
             contextualToolbar.inflateMenu(R.menu.context_menu_songs);
             SubMenu sub = contextualToolbar.getMenu().findItem(R.id.addToPlaylist).getSubMenu();
-            PlaylistUtils.makePlaylistMenu(getActivity(), sub);
+            PlaylistUtils.makePlaylistMenu(sub);
             contextualToolbar.setOnMenuItemClickListener(MenuUtils.getAlbumArtistMenuClickListener(
                     getContext(),
                     () -> Stream.of(contextualToolbarHelper.getItems())

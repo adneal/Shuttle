@@ -27,9 +27,9 @@
     <!-- Toast after turning repeat off -->
     <string name="repeat_off_notif">Повтор трека отключен.</string>
     <!-- Toast after turning single repeat on -->
-    <string name="repeat_current_notif">Включен повтор текущего трека</string>
+    <string name="repeat_current_notif">Повтор текущего трека</string>
     <!-- Toast after turning repeat all on -->
-    <string name="repeat_all_notif">Включен повтор всех песен</string>
+    <string name="repeat_all_notif">Повтор всех треков</string>
     <!-- Individual song context menu item -->
     <string name="ringtone_menu">Поставить на звонок</string>
     <!-- Toast after setting a song as phone ringtone -->
@@ -49,8 +49,7 @@
     <!-- -->
     <plurals name="NNNtrackstoqueue">
         <item quantity="one">1 песня добавлена в очередь.</item>
-        <item quantity="other"><xliff:g id="number" example="27">%d</xliff:g>
-песен добавлены в очередь</item>
+        <item quantity="other">Треков в очереди: \"<xliff:g id="number" example="27">%d</xliff:g>\"</item>
         <item quantity="few"><xliff:g id="number" example="27">%d</xliff:g>
 песни добавлены в очередь.</item>
         <item quantity="many"><xliff:g id="number" example="27">%d</xliff:g>
@@ -58,7 +57,7 @@
     </plurals>
     <!-- Toasts after adding song(s) to playlists -->
     <string name="song_to_favourites"><xliff:g id="song_name">%s</xliff:g> добавлено в избранное</string>
-    <string name="song_removed_from_favourites"><xliff:g id="song_name">%s</xliff:g> удалено с избранного</string>
+    <string name="song_removed_from_favourites"><xliff:g id="song_name">%s</xliff:g> удалено из избранного</string>
     <!-- ## Dialogs ## -->
     <!-- Restart now button -->
     <string name="restart_button">Перезапустить!</string>
@@ -70,11 +69,11 @@
     <!-- Displays when you click 'share' -->
     <string name="share_dialog_title">Чем вы хотите поделиться?</string>
     <!-- Option to share song info -->
-    <string name="share_option_song_info">Информация о текущей песне</string>
+    <string name="share_option_song_info">Информация о текущем треке</string>
     <!-- Option to share audio file -->
     <string name="share_option_audio_file">Аудиофайл</string>
     <!-- Displays when you need to choose which app to share the song with -->
-    <string name="share_via">Поделиться текущей песней через:</string>
+    <string name="share_via">Поделиться треком:</string>
     <!-- Displayed when an M3U playlist is being saved-->
     <string name="saving_playlist">Сохранение плейлиста</string>
     <!-- Displayed when whitelisting a folder, as the app gathers the songs-->
@@ -83,11 +82,19 @@
     <string name="get_pro_title">Обновить до Shuttle+</string>
     <!-- -->
     <string name="get_pro_message">Если вам нравится Shuttle Music Player, пожалуйста, подумайте об обновлении до Shuttle+
-\n\nОсобенности:
-\n\• Много дополнительных тем
-\n\• Редактирование тегов (в Android 4.4 Kitkat функциональность ограничена)
-\n\• Возможность просмотра папок
-\n\• Поддержка ChromeCast\n\nЭто также поможет дальнейшей разработке!</string>
+
+
+Особенности:
+
+\Дополнительные темы
+
+\Редактирование тегов
+
+\Просмотр папок
+
+\Поддержка ChromeCast
+
+Это также поможет дальнейшей разработке!</string>
     <!-- -->
     <string name="upgraded_title">Спасибо</string>
     <string name="upgraded_message">Вы успешно обновились до Shuttle+. Спасибо за Вашу поддержку!
@@ -134,7 +141,7 @@
     <!-- -->
     <string name="delete_file_confirmation_dialog">Вы уверены, что хотите безвозвратно удалить \"<xliff:g id="file">%s</xliff:g>\"?</string>
     <!-- Displayed when user presses 'delete artwork' -->
-    <string name="delete_artwork_confirmation_dialog">Вы уверены, что хотите полностью удалить все изображения альбомов с устройства?</string>
+    <string name="delete_artwork_confirmation_dialog">Вы уверены, что хотите полностью удалить все обложки альбомов с устройства?</string>
     <!--"Set Ringtone" title -->
     <string name="dialog_title_set_ringtone">Установить на звонок</string>
     <!-- "Set Ringtone" message -->
@@ -170,13 +177,13 @@
     <string name="fav_add">Избранное</string>
     <!-- Context menu item -->
     <string name="play_selection">Воспроизвести</string>
-    <!-- Multi select menu item-->
+    <!-- Menu item-->
     <string name="menu_add_to">Добавить в...</string>
     <!-- Multi select menu item-->
     <string name="menu_playlist">Плейлист</string>
     <!-- Multi select menu item-->
     <string name="menu_queue">Очередь</string>
-    <!-- Context menu item -->
+    <!-- Artist overflow menu item-->
     <!-- Context menu item -->
     <string name="new_playlist">Создать</string>
     <!-- menu item to save the current list as a new playlist -->
@@ -203,7 +210,7 @@
     <!-- Playlist context menu item to rename the selected playlist -->
     <string name="rename_playlist_menu">Переименовать</string>
     <!-- -->
-    <string name="delete_item">Удалить</string>
+    <string name="delete_item">Удалить с диска</string>
     <!-- Menu item to play back all the songs in the currently showing list in shuffle mode -->
     <string name="shuffle_all">Перемешать все</string>
     <!-- title of the "current playlist" screen when not in party shuffle mode -->
@@ -250,6 +257,10 @@
     <string name="pref_title_theme_dark">Тёмная</string>
     <string name="pref_title_theme_light">Светлая</string>
     <string name="pref_title_theme_black">Чёрная</string>
+    <string name="pref_group_palette">Палитра</string>
+    <string name="pref_title_palette">Использовать цвета из обложки</string>
+    <string name="pref_summary_palette">Если включено, Shuttle обнаружит более заметный цвет из обложки и будет использовать его в качестве основного во всём приложении</string>
+    <string name="pref_title_palette_now_playing">Только на экране Сейчас играет</string>
     <!--Settings title for whitelist/blacklist-->
     <string name="pref_title_blacklist">Белый/чёрный список</string>
     <!--Settings title for viewing blacklist-->
@@ -277,7 +288,7 @@
     <!-- Settings title for ignore embedded artwork checkbox (whether the app can use local artwork for the album art -->
     <string name="pref_title_ignore_mediastore_art">Игнорировать обложку от Media Store</string>
     <!-- Settings summary for the ignore folder artwork checkbox-->
-    <string name="pref_summary_ignore_mediastore_art">Android Media Store находит Ваши обложки и, похоже, хранит их в низком разрешении. Активируйте это, чтобы обойти системное хранилище медиа (чуть медленнее загрузка обложек)</string>
+    <string name="pref_summary_ignore_mediastore_art">Хранилище медиа Android находит ваши обложки и хранит их в низком разрешении. Активируйте, чтобы обойти системное хранилище медиа (чуть медленнее загрузка обложек)</string>
     <!-- Settings title for ignore folder artwork checkbox (whether the app can use local artwork for the album art -->
     <string name="pref_title_ignore_folder_art">Игнорировать обложку из папки</string>
     <!-- Settings summary for the embedded artwork checkbox-->
@@ -314,6 +325,10 @@
     <string name="pref_title_placeholders">Использовать иконки в стиле Gmail</string>
     <!-- Settings summary for gmail style placeholders checkbox-->
     <string name="pref_summary_placeholders">Использовать иконки в стиле \'Gmail\' по умолчанию. Если отключено, будет использоваться иконка Shuttle</string>
+    <!-- Settings title for the enable lockscreen controls checkbox -->
+    <string name="pref_title_lockscreen">Включить показ обложки на экране блокировки</string>
+    <!-- Settings summary for the enable lockscreen controls checkbox -->
+    <string name="pref_summary_lockscreen">Включает/отключает управление, информацию и обложку альбома, когда экран заблокирован.</string>
     <!-- Settings title for the Display heading -->
     <string name="pref_title_display">Экран</string>
     <!-- Settings title for the keep screen on checkbox -->
@@ -325,7 +340,7 @@
     <!-- Settings summary for the default page  -->
     <string name="pref_summary_default_page">Выбрать страницу, которая будет отображаться по умолчанию</string>
     <!-- Settings title for the headset control options -->
-    <string name="pref_title_headset_bluetooth">Наушники/BT гарнитура</string>
+    <string name="pref_title_headset_bluetooth">Наушники/Bluetooth</string>
     <!-- Settings title for the headset resume on connect option -->
     <string name="pref_title_headset_con">Продолжить воспроизведение при подключении</string>
     <!-- Settings summary for the headset resume on connect option -->
@@ -340,9 +355,9 @@
     <!-- Settings title 'bluetooth' -->
     <string name="pref_title_bluetooth">Bluetooth</string>
     <!-- Settings summary for the bluetooth pause on disconnect -->
-    <string name="pref_summary_bluetooth_disconnect">При отключении BT гарнитуры воспроизведение ставится на паузу</string>
+    <string name="pref_summary_bluetooth_disconnect">При отключении Bluetooth, воспроизведение ставится на паузу</string>
     <!-- Settings summary for the bluetooth resume on connect -->
-    <string name="pref_summary_bluetooth_connect">Продолжать воспроизведение, когда BT гарнитура подключена</string>
+    <string name="pref_summary_bluetooth_connect">Продолжать воспроизведение при подключении гарнитуры Bluetooth</string>
     <!-- Settings title for the scrobbling heading -->
     <string name="pref_title_scrobbling">Скробблинг</string>
     <!-- Settings title for Simple Last.fm scrobbler -->
@@ -357,10 +372,11 @@
     <!-- Settings summary for downloading the Simple Last.fm scrobbler  -->
     <string name="pref_summary_simple_download">Скачать Simple Last.FM Scrobbler с Google Play Маркета</string>
     <!-- Settings title for the About heading -->
+    <string name="pref_title_changelog">Список изменений</string>
     <!-- Settings title for the Support heading -->
     <string name="pref_title_support">Поддержка</string>
     <string name="pref_title_version">Версия</string>
-    <string name="pref_title_faq">FAQ</string>
+    <string name="pref_title_faq">Часто задаваемые вопросы</string>
     <string name="pref_summary_faq">Есть вопросы? Нужна помощь? Нажмите сюда для просмотра FAQ на www.shuttlemusicplayer.com</string>
     <string name="pref_title_gplus">Получить помощь</string>
     <string name="pref_summary_gplus">На Google+ есть очень активное сообщество пользователей Shuttle. Если Вы имеете вопросы или нуждаетесь в помощи, это лучшее место, куда следует обратиться.</string>
@@ -517,7 +533,7 @@
     <!-- -->
     <string name="empty_songlist">Песни не найдены. Скопируйте несколько песен на ваше устройство.</string>
     <!-- -->
-    <string name="empty_suggested">Прослушайте больше песен, чтобы появились рекомендуемые</string>
+    <string name="empty_suggested">Прослушайте больше музыки, и рекомендуемые появятся здесь</string>
     <string name="empty_search">Нет результатов поиска.</string>
     <!-- ## Sort options ## -->
     <string name="sorting">Сортировка</string>
@@ -550,8 +566,8 @@
     <string name="sleep_timer_stop_title">Остановить таймер сна?</string>
     <!-- Toast when sleep timer is set -->
     <string name="sleep_timer_started">Таймер сна запущен</string>
-    <!-- Sleep timer "Set time..." -->
-    <string name="sleep_timer_set_time">Установить время...</string>
+    <!-- Sleep timer "Set minutes..." -->
+    <string name="sleep_timer_set_minutes">Установить минуты...</string>
     <!-- Sleep timer "5 minutes" -->
     <string name="sleep_timer_5_mins">5 минут</string>
     <!-- Sleep timer "15 minutes" -->
@@ -716,77 +732,14 @@
     <!-- Button for lyrics -->
     <string name="lyrics">Тексты песен</string>
     <!-- Shown when there are no lyrics -->
-    <string name="no_lyrics">Встроенные тексты песни не найдены</string>
+    <string name="no_lyrics">Не найден встроенный текст</string>
     <!-- QuickLyric info dialog message-->
     <string name="quicklyric_info">QuickLyric является сборником текстов песен с открытым исходным кодом в Google Play Маркете.\n\nПосле установки, QuickLyric будет открываться из Shuttle всякий раз когда Вы будете нажимать кнопку меню \'QuickLyric\'</string>
     <!-- "Playlist" Shortcut label. Max 10 characters.-->
     <string name="shortcut_playlist_short_label">Плейлист</string>
     <!-- "Playlist" Shortcut long label. Max 25 characters.-->
-    <string name="shortcut_playlist_long_label">Открыть Избранный Плейлист</string>
+    <string name="shortcut_playlist_long_label">Открыть избранный плейлист</string>
     <!-- "Playlist" Shortcut label disabled. Possibly shows if the playlist has been deleted.-->
     <string name="shortcut_playlist_disabled">Плейлист недоступен</string>
-    <!-- Displayed when an M3U playlist is being saved, but it already exists -->
-    <string name="playlist_save_exists">Плейлист уже существует</string>
-    <plurals name="NNNtracksdeleted">
-        <item quantity="one">1 песня удалена.</item>
-        <item quantity="other">Удалено композиций: <xliff:g id="SONGS_TO_DELETE">%d</xliff:g>.</item>
-        <item quantity="few"><xliff:g id="songs_to_delete">%d</xliff:g> песни удалены.</item>
-        <item quantity="many"><xliff:g id="songs_to_delete">%d</xliff:g> песен удалено.</item>
-    </plurals>
-    <plurals name="NNNtrackstofavourites">
-        <item quantity="one">1 песня добавлена в избранное.</item>
-        <item quantity="other"><xliff:g example="18" id="number">%d</xliff:g>  песен добавлено в плейлист.</item>
-        <item quantity="few"><xliff:g example="27" id="number">%d</xliff:g> песни добавлены в избранное.</item>
-        <item quantity="many"><xliff:g example="27" id="number">%d</xliff:g> песен добавлены в избранное.</item>
-    </plurals>
-    <!-- Displays when a restart is required due to a change (themes etc) -->
-    <string name="restart_tite">Необходим перезапуск</string>
-    <!-- Displays when a restart is required due to a change (themes etc) -->
-    <string name="restart_message">Изменения не встутят в силу до перезапуска</string>
-    <!-- Displayed in the color picker dialog, to choose a 'custom' color -->
-    <string name="dialog_custom">Сбросить</string>
-    <!-- Context menu item -->
-    <string name="add_to_playlist">Плейлист</string>
-    <!-- Context menu item to remove the selected item from the playlist -->
-    <string name="remove_from_playlist">Удалить из плейлиста</string>
-    <!-- -->
-    <string name="share_title">Поделиться</string>
-    <!-- Playlist context menu item to delete the selected playlist. -->
-    <string name="delete_playlist_menu">Удалить</string>
-    <!--Settings title for white accent color) -->
-    <string name="pref_title_theme_white_accent">Использовать белый акцент</string>
-    <!--Settings summary for white accent color-->
-    <string name="pref_summary_theme_white_accent">Использование белого цвета во всех акцентах, кроме задействованных в отображении состояния (перемешивание и повтор нуждаются в цвете, отличном от белого, для индикации активации)</string>
-    <!--Settings category for 'notification' items -->
-    <string name="pref_category_notif_drawer">Панель уведомления</string>
-    <!-- Settings title for inverting the notification drawer text & icons -->
-    <string name="pref_title_invert_notif_icons">Инвертировать Иконки/Текст на панеле уведомления</string>
-    <!--Settings summary for the downloading more themes -->
-    <string name="pref_summary_get_pro_themes">Больше тем доступно в Shuttle+</string>
-    <!--Settings title for clearing whitelist-->
-    <string name="pref_title_update_whitelist">Обновить</string>
-    <!-- Settings title for the enable lockscreen controls checkbox -->
-    <string name="pref_title_lockscreen">Включить показ обложки на экране блокировки</string>
-    <!-- Settings summary for the enable lockscreen controls checkbox -->
-    <string name="pref_summary_lockscreen">Включает/отключает управление, информацию и обложку альбома, когда экран заблокирован.</string>
-    <!-- Settings title for the About heading -->
-    <string name="pref_title_about">О приложении</string>
-    <!-- Sleep timer "set" -->
-    <string name="sleep_timer_set">Установить</string>
-    <!-- Default name of artist that doesn't have a name in the metadata -->
-    <string name="unknown_artist_name">Неизвестный исполнитель</string>
-    <!-- Default name of album artist that doesn't have a name in the metadata -->
-    <string name="unknown_album_name">Неизвестный альбом</string>
-    <!-- Default name of genre that doesn't have a name in the metadata -->
-    <string name="unknown_genre_name">Неизвестный жанр</string>
-    <!-- Default name of album artist that doesn't have a name in the metadata -->
-    <string name="unknown_album_artist_name">Неизвестный исполнитель альбома</string>
-    <!-- Accessibility button description -->
-    <string name="btn_queue">Показать очередь воспроизведения</string>
-    <!-- Accessibility button description -->
-    <string name="btn_show_queue">Просмотреть очередь</string>
-    <!-- Accessibility 'show lyrics' -->
-    <string name="btn_show_lyrics">Показать тексты</string>
-    <string name="toast_purchase_failed">Что-то пошло не так. Пожалуйста, попробуйте позже...</string>
-    <string name="search_title_only">Только название</string>
+    <!-- Displayed at the top of the album list, album shuffle mode-->
 </resources>

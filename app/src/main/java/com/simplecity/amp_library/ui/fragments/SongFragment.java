@@ -3,7 +3,6 @@ package com.simplecity.amp_library.ui.fragments;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.PopupMenu;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -89,10 +88,14 @@ public class SongFragment extends BaseFragment implements
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        recyclerView = (FastScrollRecyclerView) inflater.inflate(R.layout.fragment_recycler, container, false);
-        recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        recyclerView.setRecyclerListener(new RecyclerListener());
-        recyclerView.setAdapter(adapter);
+        if (recyclerView == null) {
+            recyclerView = (FastScrollRecyclerView) inflater.inflate(R.layout.fragment_recycler, container, false);
+            recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+            recyclerView.setRecyclerListener(new RecyclerListener());
+        }
+        if (recyclerView.getAdapter() != adapter) {
+            recyclerView.setAdapter(adapter);
+        }
         return recyclerView;
     }
 
@@ -100,20 +103,21 @@ public class SongFragment extends BaseFragment implements
     public void onResume() {
         super.onResume();
 
-        refreshAdapterItems();
+        refreshAdapterItems(false);
 
         if (getUserVisibleHint()) {
             setupContextualToolbar();
         }
     }
 
-    void refreshAdapterItems() {
+    void refreshAdapterItems(boolean force) {
         PermissionUtils.RequestStoragePermissions(() -> {
                     if (getActivity() != null && isAdded()) {
 
                         boolean ascending = SortManager.getInstance().getSongsAscending();
 
                         disposable = DataManager.getInstance().getSongsRelay()
+                                .skipWhile(songs -> !force && Stream.of(adapter.items).filter(viewModel -> viewModel instanceof SongView).count() == songs.size())
                                 .flatMapSingle(songs -> {
                                     //Sort
                                     SortManager.getInstance().sortSongs(songs);
@@ -123,7 +127,6 @@ public class SongFragment extends BaseFragment implements
                                     }
                                     return Observable.fromIterable(songs)
                                             .map(song -> {
-
                                                 // Look for an existing SongView wrapping the song, we'll reuse it if it exists.
                                                 SongView songView = (SongView) Stream.of(adapter.items)
                                                         .filter(viewModel -> viewModel instanceof SongView && (((SongView) viewModel).song.equals(song)))
@@ -257,8 +260,8 @@ public class SongFragment extends BaseFragment implements
         }
 
         if (sortOrderChanged) {
-            refreshAdapterItems();
-            getActivity().supportInvalidateOptionsMenu();
+            refreshAdapterItems(true);
+            getActivity().invalidateOptionsMenu();
         }
 
         return super.onOptionsItemSelected(item);
@@ -280,10 +283,10 @@ public class SongFragment extends BaseFragment implements
     @Override
     public void onSongOverflowClick(int position, View v, Song song) {
         PopupMenu menu = new PopupMenu(SongFragment.this.getActivity(), v);
-        MenuUtils.setupSongMenu(getContext(), menu, false);
+        MenuUtils.setupSongMenu(menu, false);
         menu.setOnMenuItemClickListener(MenuUtils.getSongMenuClickListener(getContext(), song,
                 taggerDialog -> taggerDialog.show(getFragmentManager()),
-                null));
+                null, null));
         menu.show();
     }
 
@@ -320,7 +323,7 @@ public class SongFragment extends BaseFragment implements
             contextualToolbar.getMenu().clear();
             contextualToolbar.inflateMenu(R.menu.context_menu_songs);
             SubMenu sub = contextualToolbar.getMenu().findItem(R.id.addToPlaylist).getSubMenu();
-            PlaylistUtils.makePlaylistMenu(getActivity(), sub);
+            PlaylistUtils.makePlaylistMenu(sub);
 
             contextualToolbar.setOnMenuItemClickListener(MenuUtils.getSongMenuClickListener(getContext(), () -> Stream.of(contextualToolbarHelper.getItems())
                     .map(SelectableViewModel::getItem)
@@ -337,7 +340,6 @@ public class SongFragment extends BaseFragment implements
                 }
             });
         }
-        Log.i(TAG, "setupContextualToolbar.. Visible to user: " + getUserVisibleHint());
     }
 
     @Override

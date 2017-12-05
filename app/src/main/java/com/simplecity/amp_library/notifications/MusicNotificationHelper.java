@@ -25,7 +25,6 @@ import com.simplecity.amp_library.glide.utils.GlideUtils;
 import com.simplecity.amp_library.model.Song;
 import com.simplecity.amp_library.playback.MusicService;
 import com.simplecity.amp_library.utils.LogUtils;
-import com.simplecity.amp_library.utils.MusicUtils;
 import com.simplecity.amp_library.utils.PlaceholderProvider;
 import com.simplecity.amp_library.utils.PlaylistUtils;
 
@@ -63,9 +62,9 @@ public class MusicNotificationHelper extends NotificationHelper {
                 .setSmallIcon(R.drawable.ic_stat_notification)
                 .setContentIntent(contentIntent)
                 .setChannelId(NOTIFICATION_CHANNEL_ID)
-                .setPriority(Notification.PRIORITY_MAX)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setContentTitle(song.name)
-                .setContentText(song.albumArtistName + " - " + song.albumName)
+                .setContentText(song.artistName + " - " + song.albumName)
                 .setStyle(new android.support.v4.media.app.NotificationCompat.MediaStyle()
                         .setShowActionsInCompactView(0, 1, 2)
                         .setMediaSession(mediaSessionCompat.getSessionToken()))
@@ -84,14 +83,11 @@ public class MusicNotificationHelper extends NotificationHelper {
                         context.getString(R.string.btn_skip),
                         MusicService.retrievePlaybackAction(context, MusicService.ServiceCommand.NEXT_ACTION)
                 )
-                //Todo:
-                // Adding to favorites works, but the wrap-around call to update the notification seems to happen
-                // before isPlaylist() returns true.. A bug for another day.
-//                .addAction(
-//                        isFavorite ? R.drawable.ic_favorite_24dp_scaled : R.drawable.ic_favorite_border_24dp_scaled,
-//                        context.getString(R.string.fav_add),
-//                        MusicService.retrievePlaybackAction(context, MusicService.ServiceCommand.TOGGLE_FAVORITE)
-//                )
+                .addAction(
+                        isFavorite ? R.drawable.ic_favorite_24dp_scaled : R.drawable.ic_favorite_border_24dp_scaled,
+                        context.getString(R.string.fav_add),
+                        MusicService.retrievePlaybackAction(context, MusicService.ServiceCommand.TOGGLE_FAVORITE)
+                )
                 .setShowWhen(false)
                 .setVisibility(android.support.v4.app.NotificationCompat.VISIBILITY_PUBLIC);
 
@@ -102,9 +98,8 @@ public class MusicNotificationHelper extends NotificationHelper {
         return builder;
     }
 
-    public void notify(Context context, @NonNull Song song, @NonNull MediaSessionCompat mediaSessionCompat) {
-
-        notification = getBuilder(context, song, mediaSessionCompat, bitmap, MusicUtils.isPlaying(), isFavorite).build();
+    public void notify(Context context, @NonNull Song song, boolean isPlaying, @NonNull MediaSessionCompat mediaSessionCompat) {
+        notification = getBuilder(context, song, mediaSessionCompat, bitmap, isPlaying, isFavorite).build();
         notify(NOTIFICATION_ID, notification);
 
         PlaylistUtils.isFavorite(song)
@@ -112,7 +107,7 @@ public class MusicNotificationHelper extends NotificationHelper {
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(isFavorite -> {
                     this.isFavorite = isFavorite;
-                    notification = getBuilder(context, song, mediaSessionCompat, MusicNotificationHelper.this.bitmap, MusicUtils.isPlaying(), isFavorite).build();
+                    notification = getBuilder(context, song, mediaSessionCompat, MusicNotificationHelper.this.bitmap, isPlaying, isFavorite).build();
                     notify(notification);
                 });
 
@@ -128,7 +123,7 @@ public class MusicNotificationHelper extends NotificationHelper {
                     public void onResourceReady(Bitmap resource, GlideAnimation<? super Bitmap> glideAnimation) {
                         MusicNotificationHelper.this.bitmap = resource;
                         try {
-                            notification = getBuilder(context, song, mediaSessionCompat, bitmap, MusicUtils.isPlaying(), isFavorite).build();
+                            notification = getBuilder(context, song, mediaSessionCompat, bitmap, isPlaying, isFavorite).build();
                             MusicNotificationHelper.this.notify(notification);
                         } catch (NullPointerException | ConcurrentModificationException e) {
                             LogUtils.logException(TAG, "Exception while attempting to update notification with glide image.", e);
@@ -139,14 +134,14 @@ public class MusicNotificationHelper extends NotificationHelper {
                     public void onLoadFailed(Exception e, Drawable errorDrawable) {
                         MusicNotificationHelper.this.bitmap = GlideUtils.drawableToBitmap(errorDrawable);
                         super.onLoadFailed(e, errorDrawable);
-                        notification = getBuilder(context, song, mediaSessionCompat, bitmap, MusicUtils.isPlaying(), isFavorite).build();
+                        notification = getBuilder(context, song, mediaSessionCompat, bitmap, isPlaying, isFavorite).build();
                         MusicNotificationHelper.this.notify(NOTIFICATION_ID, notification);
                     }
                 }));
     }
 
-    public void startForeground(Service service, @NonNull Song song, @NonNull MediaSessionCompat mediaSessionCompat) {
-        notify(service, song, mediaSessionCompat);
+    public void startForeground(Service service, @NonNull Song song, boolean isPlaying, @NonNull MediaSessionCompat mediaSessionCompat) {
+        notify(service, song, isPlaying, mediaSessionCompat);
         service.startForeground(NOTIFICATION_ID, notification);
     }
 

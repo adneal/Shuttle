@@ -133,7 +133,7 @@ public class QueueFragment extends BaseFragment implements
         toolbar.inflateMenu(R.menu.menu_queue);
 
         SubMenu sub = toolbar.getMenu().addSubMenu(0, MusicUtils.Defs.ADD_TO_PLAYLIST, 1, R.string.save_as_playlist);
-        PlaylistUtils.makePlaylistMenu(getContext(), sub);
+        PlaylistUtils.makePlaylistMenu(sub);
 
         toolbar.setOnMenuItemClickListener(toolbarListener);
 
@@ -209,7 +209,7 @@ public class QueueFragment extends BaseFragment implements
         contextualToolbar.getMenu().clear();
         contextualToolbar.inflateMenu(R.menu.context_menu_queue);
         SubMenu sub = contextualToolbar.getMenu().findItem(R.id.addToPlaylist).getSubMenu();
-        PlaylistUtils.makePlaylistMenu(getActivity(), sub);
+        PlaylistUtils.makePlaylistMenu(sub);
         contextualToolbar.setOnMenuItemClickListener(MenuUtils.getSongMenuClickListener(getContext(), MusicUtils::getQueue));
         contextualToolbarHelper = new ContextualToolbarHelper<>(contextualToolbar, new ContextualToolbarHelper.Callback() {
             @Override
@@ -241,17 +241,12 @@ public class QueueFragment extends BaseFragment implements
                 loadDataDisposable = adapter.setItems(items, new CompletionListUpdateCallbackAdapter() {
                     @Override
                     public void onComplete() {
-                        setCurrentQueueItem(position);
+                        updateQueuePosition(position, false);
                         recyclerView.scrollToPosition(position);
                     }
                 });
             }
         });
-    }
-
-    @Override
-    public void updateQueuePosition(int position) {
-        recyclerView.scrollToPosition(position);
     }
 
     @Override
@@ -264,11 +259,16 @@ public class QueueFragment extends BaseFragment implements
         itemTouchHelper.startDrag(holder);
     }
 
-    @Override
-    public void setCurrentQueueItem(int position) {
 
-        if (adapter.items.isEmpty()) {
+    @Override
+    public void updateQueuePosition(int position, boolean fromUser) {
+
+        if (adapter.items.isEmpty() || position >= adapter.items.size() || position < 0) {
             return;
+        }
+
+        if (!fromUser) {
+            recyclerView.scrollToPosition(position);
         }
 
         int prevPosition = -1;
@@ -297,6 +297,11 @@ public class QueueFragment extends BaseFragment implements
     @Override
     public void removeFromQueue(int position) {
         adapter.removeItem(position);
+    }
+
+    @Override
+    public void moveQueueItem(int from, int to) {
+        adapter.moveItem(from, to);
     }
 
     private PlayerViewAdapter playerViewAdapter = new PlayerViewAdapter() {

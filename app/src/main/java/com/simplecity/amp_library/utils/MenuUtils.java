@@ -23,12 +23,13 @@ import com.simplecity.amp_library.model.BaseFileObject;
 import com.simplecity.amp_library.model.FileObject;
 import com.simplecity.amp_library.model.FolderObject;
 import com.simplecity.amp_library.model.Genre;
+import com.simplecity.amp_library.model.InclExclItem;
 import com.simplecity.amp_library.model.Playlist;
 import com.simplecity.amp_library.model.Song;
 import com.simplecity.amp_library.rx.UnsafeAction;
 import com.simplecity.amp_library.rx.UnsafeCallable;
 import com.simplecity.amp_library.rx.UnsafeConsumer;
-import com.simplecity.amp_library.sql.databases.BlacklistHelper;
+import com.simplecity.amp_library.sql.databases.InclExclHelper;
 import com.simplecity.amp_library.tagger.TaggerDialog;
 import com.simplecity.amp_library.ui.dialog.BiographyDialog;
 import com.simplecity.amp_library.ui.dialog.DeleteDialog;
@@ -81,12 +82,20 @@ public class MenuUtils implements MusicUtils.Defs {
         MusicUtils.addToQueue(songs, message -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show());
     }
 
+    public static void whitelist(Song song) {
+        InclExclHelper.addToInclExcl(song, InclExclItem.Type.INCLUDE);
+    }
+
+    public static void whitelist(List<Song> songs) {
+        InclExclHelper.addToInclExcl(songs, InclExclItem.Type.INCLUDE);
+    }
+
     public static void blacklist(Song song) {
-        BlacklistHelper.addToBlacklist(song);
+        InclExclHelper.addToInclExcl(song, InclExclItem.Type.EXCLUDE);
     }
 
     public static void blacklist(List<Song> songs) {
-        BlacklistHelper.addToBlacklist(songs);
+        InclExclHelper.addToInclExcl(songs, InclExclItem.Type.EXCLUDE);
     }
 
     public static void delete(Context context, List<Song> songs) {
@@ -102,11 +111,7 @@ public class MenuUtils implements MusicUtils.Defs {
                 .show();
     }
 
-    public static void remove(Song song) {
-        MusicUtils.removeFromQueue(song, true);
-    }
-
-    public static void setupSongMenu(Context context, PopupMenu menu, boolean showRemoveButton) {
+    public static void setupSongMenu(PopupMenu menu, boolean showRemoveButton) {
         menu.inflate(R.menu.menu_song);
 
         if (!showRemoveButton) {
@@ -115,7 +120,7 @@ public class MenuUtils implements MusicUtils.Defs {
 
         // Add playlist menu
         SubMenu sub = menu.getMenu().findItem(R.id.addToPlaylist).getSubMenu();
-        PlaylistUtils.makePlaylistMenu(context, sub);
+        PlaylistUtils.makePlaylistMenu(sub);
     }
 
     public static Toolbar.OnMenuItemClickListener getSongMenuClickListener(Context context, UnsafeCallable<List<Song>> callable) {
@@ -142,11 +147,15 @@ public class MenuUtils implements MusicUtils.Defs {
         };
     }
 
-    public static PopupMenu.OnMenuItemClickListener getSongMenuClickListener(Context context, Song song, UnsafeConsumer<TaggerDialog> tagEditorCallback, @Nullable UnsafeAction songRemoved) {
+    public static PopupMenu.OnMenuItemClickListener getSongMenuClickListener(Context context, Song song, UnsafeConsumer<TaggerDialog> tagEditorCallback, @Nullable UnsafeAction onSongRemoved, @Nullable UnsafeAction onPlayNext) {
         return item -> {
             switch (item.getItemId()) {
                 case R.id.playNext:
-                    playNext(context, song);
+                    if (onPlayNext != null) {
+                        onPlayNext.run();
+                    } else {
+                        playNext(context, song);
+                    }
                     return true;
                 case NEW_PLAYLIST:
                     newPlaylist(context, Collections.singletonList(song));
@@ -176,10 +185,9 @@ public class MenuUtils implements MusicUtils.Defs {
                     delete(context, Collections.singletonList(song));
                     return true;
                 case R.id.remove:
-                    if (songRemoved != null) {
-                        songRemoved.run();
+                    if (onSongRemoved != null) {
+                        onSongRemoved.run();
                     }
-                    remove(song);
                     return true;
             }
             return false;
@@ -187,6 +195,14 @@ public class MenuUtils implements MusicUtils.Defs {
     }
 
     // Albums
+
+    public static void setupAlbumMenu(PopupMenu menu) {
+        menu.inflate(R.menu.menu_album);
+
+        // Add playlist menu
+        SubMenu sub = menu.getMenu().findItem(R.id.addToPlaylist).getSubMenu();
+        PlaylistUtils.makePlaylistMenu(sub);
+    }
 
     private static Single<List<Song>> getSongsForAlbum(Album album) {
         return album.getSongsSingle()
@@ -243,6 +259,11 @@ public class MenuUtils implements MusicUtils.Defs {
 
     public static void showArtworkChooserDialog(Context context, Album album) {
         ArtworkDialog.build(context, album).show();
+    }
+
+    public static void whitelist(Single<List<Song>> single) {
+        single.observeOn(AndroidSchedulers.mainThread())
+                .subscribe((songs, throwable) -> whitelist(songs));
     }
 
     public static void blacklist(Single<List<Song>> single) {
@@ -397,6 +418,9 @@ public class MenuUtils implements MusicUtils.Defs {
                 case R.id.play:
                     play(context, getSongsForAlbumArtist(albumArtist));
                     return true;
+                case R.id.albumShuffle:
+                    play(context, getSongsForAlbumArtist(albumArtist).map(Operators::albumShuffleSongs));
+                    return true;
                 case NEW_PLAYLIST:
                     newPlaylist(context, getSongsForAlbumArtist(albumArtist));
                     return true;
@@ -434,7 +458,7 @@ public class MenuUtils implements MusicUtils.Defs {
     }
 
     public static void edit(Context context, Playlist playlist) {
-        if (playlist.id == MusicUtils.PlaylistIds.RECENTLY_ADDED_PLAYLIST) {
+        if (playlist.id == PlaylistUtils.PlaylistIds.RECENTLY_ADDED_PLAYLIST) {
             DialogUtils.showWeekSelectorDialog(context);
         }
     }
@@ -462,7 +486,7 @@ public class MenuUtils implements MusicUtils.Defs {
             menu.getMenu().findItem(R.id.clearPlaylist).setVisible(false);
         }
 
-        if (playlist.id != MusicUtils.PlaylistIds.RECENTLY_ADDED_PLAYLIST) {
+        if (playlist.id != PlaylistUtils.PlaylistIds.RECENTLY_ADDED_PLAYLIST) {
             menu.getMenu().findItem(R.id.editPlaylist).setVisible(false);
         }
 
@@ -470,35 +494,64 @@ public class MenuUtils implements MusicUtils.Defs {
             menu.getMenu().findItem(R.id.renamePlaylist).setVisible(false);
         }
 
-        if (playlist.id == MusicUtils.PlaylistIds.MOST_PLAYED_PLAYLIST) {
+        if (playlist.id == PlaylistUtils.PlaylistIds.MOST_PLAYED_PLAYLIST) {
             menu.getMenu().findItem(R.id.exportPlaylist).setVisible(false);
         }
     }
 
-    public static PopupMenu.OnMenuItemClickListener getPlaylistClickListener(final Context context, final Playlist playlist) {
-        return item -> {
-            switch (item.getItemId()) {
-                case R.id.playPlaylist:
-                    play(context, playlist.getSongsObservable().first(Collections.emptyList()));
-                    return true;
-                case R.id.deletePlaylist:
-                    delete(context, playlist);
-                    return true;
-                case R.id.editPlaylist:
-                    edit(context, playlist);
-                    return true;
-                case R.id.renamePlaylist:
-                    rename(context, playlist);
-                    return true;
-                case R.id.exportPlaylist:
-                    export(context, playlist);
-                    return true;
-                case R.id.clearPlaylist:
-                    clear(playlist);
-                    return true;
-            }
-            return false;
-        };
+    public static void setupPlaylistMenu(Toolbar toolbar, Playlist playlist) {
+        toolbar.inflateMenu(R.menu.menu_playlist);
+
+        if (!playlist.canDelete) {
+            toolbar.getMenu().findItem(R.id.deletePlaylist).setVisible(false);
+        }
+
+        if (!playlist.canClear) {
+            toolbar.getMenu().findItem(R.id.clearPlaylist).setVisible(false);
+        }
+
+        if (playlist.id != PlaylistUtils.PlaylistIds.RECENTLY_ADDED_PLAYLIST) {
+            toolbar.getMenu().findItem(R.id.editPlaylist).setVisible(false);
+        }
+
+        if (!playlist.canRename) {
+            toolbar.getMenu().findItem(R.id.renamePlaylist).setVisible(false);
+        }
+
+        if (playlist.id == PlaylistUtils.PlaylistIds.MOST_PLAYED_PLAYLIST) {
+            toolbar.getMenu().findItem(R.id.exportPlaylist).setVisible(false);
+        }
+    }
+
+    public static PopupMenu.OnMenuItemClickListener getPlaylistPopupMenuClickListener(final Context context, final Playlist playlist, @Nullable UnsafeAction playlistDeleted) {
+        return item -> handleMenuItemClicks(context, item, playlist, playlistDeleted);
+    }
+
+    public static boolean handleMenuItemClicks(Context context, MenuItem menuItem, Playlist playlist, @Nullable UnsafeAction playlistDeleted) {
+        switch (menuItem.getItemId()) {
+            case R.id.playPlaylist:
+                play(context, playlist.getSongsObservable().first(Collections.emptyList()));
+                return true;
+            case R.id.deletePlaylist:
+                delete(context, playlist);
+                if (playlistDeleted != null) {
+                    playlistDeleted.run();
+                }
+                return true;
+            case R.id.editPlaylist:
+                edit(context, playlist);
+                return true;
+            case R.id.renamePlaylist:
+                rename(context, playlist);
+                return true;
+            case R.id.exportPlaylist:
+                export(context, playlist);
+                return true;
+            case R.id.clearPlaylist:
+                clear(playlist);
+                return true;
+        }
+        return false;
     }
 
     // Genres
@@ -547,13 +600,13 @@ public class MenuUtils implements MusicUtils.Defs {
         return FileHelper.getSongList(new File(folderObject.path), true, false);
     }
 
-    public static void setupFolderMenu(Context context, PopupMenu menu, BaseFileObject fileObject) {
+    public static void setupFolderMenu(PopupMenu menu, BaseFileObject fileObject) {
 
         menu.inflate(R.menu.menu_file);
 
         // Add playlist menu
         SubMenu sub = menu.getMenu().findItem(R.id.addToPlaylist).getSubMenu();
-        PlaylistUtils.makePlaylistMenu(context, sub);
+        PlaylistUtils.makePlaylistMenu(sub);
 
         if (!fileObject.canReadWrite()) {
             menu.getMenu().findItem(R.id.rename).setVisible(false);
@@ -693,6 +746,8 @@ public class MenuUtils implements MusicUtils.Defs {
                     return true;
                 case R.id.blacklist:
                     getSongForFile(fileObject).subscribe(song -> blacklist(song));
+                case R.id.whitelist:
+                    getSongForFile(fileObject).subscribe(song -> whitelist(song));
                     return true;
                 case R.id.rename:
                     renameFile(context, fileObject, filenameChanged);
@@ -726,6 +781,8 @@ public class MenuUtils implements MusicUtils.Defs {
                 case R.id.scan:
                     scanFolder(context, folderObject);
                     return true;
+                case R.id.whitelist:
+                    whitelist(getSongsForFolderObject(folderObject));
                 case R.id.blacklist:
                     blacklist(getSongsForFolderObject(folderObject));
                     return true;

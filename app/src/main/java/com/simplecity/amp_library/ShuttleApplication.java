@@ -38,6 +38,7 @@ import com.simplecity.amp_library.sql.databases.CustomArtworkTable;
 import com.simplecity.amp_library.sql.providers.PlayCountTable;
 import com.simplecity.amp_library.sql.sqlbrite.SqlBriteUtils;
 import com.simplecity.amp_library.utils.AnalyticsManager;
+import com.simplecity.amp_library.utils.LegacyUtils;
 import com.simplecity.amp_library.utils.LogUtils;
 import com.simplecity.amp_library.utils.SettingsManager;
 import com.squareup.leakcanary.LeakCanary;
@@ -115,8 +116,14 @@ public class ShuttleApplication extends Application {
         refWatcher = LeakCanary.install(this);
 
         //Crashlytics
-        CrashlyticsCore core = new CrashlyticsCore.Builder().disabled(BuildConfig.DEBUG).build();
-        Fabric.with(this, new Crashlytics.Builder().core(core).answers(new Answers()).build(), new Crashlytics());
+        Fabric.with(this,
+                new Crashlytics.Builder()
+                        .core(new CrashlyticsCore.Builder()
+                                .disabled(BuildConfig.DEBUG)
+                                .build())
+                        .answers(new Answers())
+                        .build(),
+                new Crashlytics());
 
         //Firebase Analytics
         FirebaseAnalytics.getInstance(this);
@@ -182,13 +189,13 @@ public class ShuttleApplication extends Application {
                 .subscribeOn(Schedulers.io())
                 .subscribe();
 
-        cleanMostPlayedPlaylist()
-                .delay(7500, TimeUnit.MILLISECONDS)
+        Completable.timer(7500, TimeUnit.MILLISECONDS)
+                .andThen(cleanMostPlayedPlaylist())
                 .subscribeOn(Schedulers.io())
                 .subscribe();
 
-        deleteOldResources()
-                .delay(10000, TimeUnit.MILLISECONDS)
+        Completable.timer(10000, TimeUnit.MILLISECONDS)
+                .andThen(LegacyUtils.deleteOldResources())
                 .subscribeOn(Schedulers.io())
                 .subscribe();
     }
@@ -230,38 +237,6 @@ public class ShuttleApplication extends Application {
 
     public boolean getIsUpgraded() {
         return isUpgraded || BuildConfig.DEBUG;
-    }
-
-    @NonNull
-    private Completable deleteOldResources() {
-
-        return Completable.fromAction(() -> {
-            //Delete albumthumbs/artists directory
-            if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
-                File file = new File(Environment.getExternalStorageDirectory() + "/albumthumbs/artists/");
-                if (file.exists() && file.isDirectory()) {
-                    File[] files = file.listFiles();
-                    if (files != null) {
-                        for (File child : files) {
-                            child.delete();
-                        }
-                    }
-                    file.delete();
-                }
-            }
-
-            //Delete old http cache
-            File oldHttpCache = getDiskCacheDir("http");
-            if (oldHttpCache != null && oldHttpCache.exists()) {
-                oldHttpCache.delete();
-            }
-
-            //Delete old thumbs cache
-            File oldThumbsCache = getDiskCacheDir("thumbs");
-            if (oldThumbsCache != null && oldThumbsCache.exists()) {
-                oldThumbsCache.delete();
-            }
-        });
     }
 
     public static File getDiskCacheDir(String uniqueName) {

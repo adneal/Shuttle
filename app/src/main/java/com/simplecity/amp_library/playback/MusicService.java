@@ -21,6 +21,8 @@ import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteException;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
+import android.media.AudioAttributes;
+import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.media.AudioManager.OnAudioFocusChangeListener;
 import android.media.RemoteControlClient;
@@ -35,6 +37,7 @@ import android.os.PowerManager.WakeLock;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.media.MediaMetadataCompat;
@@ -237,6 +240,7 @@ public class MusicService extends Service {
     List<Song> playlist = new ArrayList<>();
     List<Song> shuffleList = new ArrayList<>();
 
+    @Nullable
     Song currentSong;
 
     int playPos = -1;
@@ -307,6 +311,9 @@ public class MusicService extends Service {
     private AlarmManager alarmManager;
 
     private PendingIntent shutdownIntent;
+
+    @Nullable
+    private AudioFocusRequest audioFocusRequest;
 
     private boolean shutdownScheduled;
 
@@ -456,9 +463,6 @@ public class MusicService extends Service {
 
             @Override
             public void onRemoteMediaPlayerStatusUpdated() {
-
-                Log.i(TAG, "onRemoteMediaPlayerStatusUpdated.. Status: " + castManager.getPlaybackStatus());
-
                 //Only send a track finished message if the state has changed..
                 if (castManager.getPlaybackStatus() != castMediaStatus) {
                     if (castManager.getPlaybackStatus() == MediaStatus.PLAYER_STATE_IDLE
@@ -515,7 +519,7 @@ public class MusicService extends Service {
                         pausedByTransientLossOfFocus = false;
                         releaseServiceUiAndStop();
                     } else if (MediaButtonCommand.TOGGLE_FAVORITE.equals(cmd)) {
-                        PlaylistUtils.toggleFavorite(message -> Toast.makeText(MusicService.this, message, Toast.LENGTH_SHORT).show());
+                        toggleFavorite();
                     }
                     if (WidgetProviderSmall.CMDAPPWIDGETUPDATE.equals(cmd)) {
                         // Someone asked us to refresh a set of specific widgets,
@@ -856,7 +860,13 @@ public class MusicService extends Service {
         player = null;
 
         // Remove the audio focus listener and lock screen controls
-        audioManager.abandonAudioFocus(audioFocusListener);
+        if (ShuttleUtils.hasOreo()) {
+            if (audioFocusRequest != null) {
+                audioManager.abandonAudioFocusRequest(audioFocusRequest);
+            }
+        } else {
+            audioManager.abandonAudioFocus(audioFocusListener);
+        }
         mediaSession.release();
 
         unregisterHeadsetPlugReceiver();
@@ -919,8 +929,7 @@ public class MusicService extends Service {
             } else if (ServiceCommand.REPEAT_ACTION.equals(action)) {
                 toggleRepeat();
             } else if (MediaButtonCommand.TOGGLE_FAVORITE.equals(action) || ServiceCommand.TOGGLE_FAVORITE.equals(action)) {
-                PlaylistUtils.toggleFavorite(message -> Toast.makeText(MusicService.this, message, Toast.LENGTH_SHORT).show());
-                notifyChange(InternalIntents.FAVORITE_CHANGED);
+                toggleFavorite();
             } else if (ExternalIntents.PLAY_STATUS_REQUEST.equals(action)) {
                 notifyChange(ExternalIntents.PLAY_STATUS_RESPONSE);
             } else if (ServiceCommand.SHUTDOWN.equals(action)) {
@@ -962,7 +971,13 @@ public class MusicService extends Service {
         }
 
         cancelNotification();
-        audioManager.abandonAudioFocus(audioFocusListener);
+        if (ShuttleUtils.hasOreo()) {
+            if (audioFocusRequest != null) {
+                audioManager.abandonAudioFocusRequest(audioFocusRequest);
+            }
+        } else {
+            audioManager.abandonAudioFocus(audioFocusListener);
+        }
 
         mediaSession.setActive(false);
 
@@ -991,61 +1006,92 @@ public class MusicService extends Service {
         final SharedPreferences.Editor editor = servicePrefs.edit();
 
         if (full) {
-            final StringBuilder q = new StringBuilder();
+            editor.putString("queue", serializePlaylist(playlist));
 
-            // The current playlist is saved as a list of "reverse hexadecimal"
-            // numbers, which we can generate faster than normal decimal or
-            // hexadecimal numbers, which in turn allows us to save the playlist
-            // more often without worrying too much about performance.
-            int len = playlist.size();
-            for (int i = 0; i < len; i++) {
-                long n = playlist.get(i).id;
-                if (n >= 0) {
-                    if (n == 0) {
-                        q.append("0;");
-                    } else {
-                        while (n != 0) {
-                            final int digit = (int) (n & 0xf);
-                            n >>>= 4;
-                            q.append(hexDigits[digit]);
-                        }
-                        q.append(";");
-                    }
-                }
-            }
-
-            editor.putString("queue", q.toString());
-
-            //Now save shuffle queue
-            if (shuffleMode != ShuffleMode.OFF) {
-                len = shuffleList.size();
-                q.setLength(0);
-                for (int i = 0; i < len; i++) {
-                    long n = shuffleList.get(i).id;
-                    if (n >= 0) {
-                        if (n == 0) {
-                            q.append("0;");
-                        } else {
-                            while (n != 0) {
-                                final int digit = (int) (n & 0xf);
-                                n >>>= 4;
-                                q.append(hexDigits[digit]);
-                            }
-                            q.append(";");
-                        }
-                    }
-                }
-                editor.putString("shuffleList", q.toString());
+            if (shuffleMode == ShuffleMode.ON) {
+                editor.putString("shuffleList", serializePlaylist(shuffleList));
             }
         }
+
         editor.putInt("curpos", playPos);
-        if (player != null && player.isInitialized()) {
-            editor.putLong("seekpos", player.getPosition());
-        }
         editor.putInt("repeatmode", repeatMode);
         editor.putInt("shufflemode", shuffleMode);
 
+        if (player != null && player.isInitialized()) {
+            editor.putLong("seekpos", player.getPosition());
+        }
+
         editor.apply();
+    }
+
+    /**
+     * Converts a playlist to a String which can be saved to SharedPrefs
+     */
+    private String serializePlaylist(List<Song> list) {
+
+        // The current playlist is saved as a list of "reverse hexadecimal"
+        // numbers, which we can generate faster than normal decimal or
+        // hexadecimal numbers, which in turn allows us to save the playlist
+        // more often without worrying too much about performance.
+
+        StringBuilder q = new StringBuilder();
+
+        int len = list.size();
+        for (int i = 0; i < len; i++) {
+            long n = list.get(i).id;
+            if (n >= 0) {
+                if (n == 0) {
+                    q.append("0;");
+                } else {
+                    while (n != 0) {
+                        final int digit = (int) (n & 0xf);
+                        n >>>= 4;
+                        q.append(hexDigits[digit]);
+                    }
+                    q.append(";");
+                }
+            }
+        }
+
+        return q.toString();
+    }
+
+    /**
+     * Converts a string representation of a playlist from SharedPrefs into a list of songs.
+     */
+    private List<Song> deserializePlaylist(String listString, List<Song> allSongs) {
+        List<Long> ids = new ArrayList<>();
+        int n = 0;
+        int shift = 0;
+        for (int i = 0; i < listString.length(); i++) {
+            char c = listString.charAt(i);
+            if (c == ';') {
+                ids.add((long) n);
+                n = 0;
+                shift = 0;
+            } else {
+                if (c >= '0' && c <= '9') {
+                    n += ((c - '0') << shift);
+                } else if (c >= 'a' && c <= 'f') {
+                    n += ((10 + c - 'a') << shift);
+                } else {
+                    // bogus playlist data
+                    playlist.clear();
+                    break;
+                }
+                shift += 4;
+            }
+        }
+
+        Map<Integer, Song> map = new TreeMap<>();
+
+        for (Song song : allSongs) {
+            int index = ids.indexOf(song.id);
+            if (index != -1) {
+                map.put(index, song);
+            }
+        }
+        return new ArrayList<>(map.values());
     }
 
     synchronized void reloadQueue() {
@@ -1066,42 +1112,10 @@ public class MusicService extends Service {
                     public void accept(List<Song> songs) {
                         String q = servicePrefs.getString("queue", "");
 
-                        List<Long> ids = new ArrayList<>();
-
                         int len = q.length();
                         if (len > 1) {
-                            int n = 0;
-                            int shift = 0;
-                            for (int i = 0; i < len; i++) {
-                                char c = q.charAt(i);
-                                if (c == ';') {
-                                    ids.add((long) n);
-                                    n = 0;
-                                    shift = 0;
-                                } else {
-                                    if (c >= '0' && c <= '9') {
-                                        n += ((c - '0') << shift);
-                                    } else if (c >= 'a' && c <= 'f') {
-                                        n += ((10 + c - 'a') << shift);
-                                    } else {
-                                        // bogus playlist data
-                                        playlist.clear();
-                                        break;
-                                    }
-                                    shift += 4;
-                                }
-                            }
 
-                            Map<Integer, Song> map = new TreeMap<>();
-
-                            for (Song song : songs) {
-                                int index = ids.indexOf(song.id);
-                                if (index != -1) {
-                                    map.put(index, song);
-                                }
-                            }
-
-                            playlist = new ArrayList<>(map.values());
+                            playlist = deserializePlaylist(q, songs);
 
                             final int pos = servicePrefs.getInt("curpos", 0);
                             if (pos < 0 || pos >= playlist.size()) {
@@ -1110,8 +1124,6 @@ public class MusicService extends Service {
                                 queueReloadComplete();
                                 return;
                             }
-
-                            ids.clear();
 
                             playPos = pos;
 
@@ -1125,37 +1137,7 @@ public class MusicService extends Service {
                                 q = servicePrefs.getString("shuffleList", "");
                                 len = q.length();
                                 if (len > 1) {
-                                    n = 0;
-                                    shift = 0;
-                                    for (int i = 0; i < len; i++) {
-                                        char c = q.charAt(i);
-                                        if (c == ';') {
-                                            ids.add((long) n);
-                                            n = 0;
-                                            shift = 0;
-                                        } else {
-                                            if (c >= '0' && c <= '9') {
-                                                n += ((c - '0') << shift);
-                                            } else if (c >= 'a' && c <= 'f') {
-                                                n += ((10 + c - 'a') << shift);
-                                            } else {
-                                                // bogus playlist data
-                                                break;
-                                            }
-                                            shift += 4;
-                                        }
-                                    }
-
-                                    map.clear();
-
-                                    for (Song song : songs) {
-                                        int index = ids.indexOf(song.id);
-                                        if (index != -1) {
-                                            map.put(index, song);
-                                        }
-                                    }
-
-                                    shuffleList = new ArrayList<>(map.values());
+                                    shuffleList = deserializePlaylist(q, songs);
 
                                     if (pos < 0 || pos >= shuffleList.size()) {
                                         // The saved playlist is bogus, discard it
@@ -1323,6 +1305,13 @@ public class MusicService extends Service {
             return;
         }
 
+        if (what.equals(InternalIntents.FAVORITE_CHANGED)) {
+            updateNotification();
+            Intent intent = new Intent(what);
+            sendBroadcast(intent);
+            return;
+        }
+
         updateMediaSession(what);
 
         if (what.equals(InternalIntents.POSITION_CHANGED)) {
@@ -1467,14 +1456,14 @@ public class MusicService extends Service {
         }
     }
 
-
     /**
      * Opens a list for playback
      *
-     * @param songs    The list of tracks to open
-     * @param position The position to start playback at
+     * @param songs       The list of tracks to open
+     * @param shuffleMode The shuffle mode
+     * @param position    The position to start playback at
      */
-    public void open(List<Song> songs, final int position) {
+    public void open(List<Song> songs, final int position, final int shuffleMode) {
         synchronized (this) {
 
             boolean notifyQueueChange = false;
@@ -1494,7 +1483,7 @@ public class MusicService extends Service {
                 notifyQueueChange = true;
             }
 
-            if (position >= 0) {
+            if (shuffleMode == ShuffleMode.OFF) {
                 playPos = position;
             } else {
                 playPos = shuffler.nextInt(playlist.size());
@@ -1519,6 +1508,17 @@ public class MusicService extends Service {
                 notifyChange(InternalIntents.QUEUE_CHANGED);
             }
         }
+    }
+
+    /**
+     * Opens a list for playback
+     *
+     * @param songs    The list of tracks to open
+     * @param position The position to start playback at
+     */
+    public void open(List<Song> songs, final int position) {
+        // position less than one previously has indicated track shuffle mode
+        open(songs, position < 0 ? ShuffleMode.ON : ShuffleMode.OFF, position);
     }
 
     /**
@@ -1748,8 +1748,21 @@ public class MusicService extends Service {
      * Starts playback of a previously opened file.
      */
     public void play() {
+        int status;
 
-        int status = audioManager.requestAudioFocus(audioFocusListener, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
+        if (ShuttleUtils.hasOreo()) {
+            AudioFocusRequest audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                    .setOnAudioFocusChangeListener(audioFocusListener)
+                    .setAudioAttributes(new AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                            .build())
+                    .build();
+            this.audioFocusRequest = audioFocusRequest;
+            status = audioManager.requestAudioFocus(audioFocusRequest);
+        } else {
+            status = audioManager.requestAudioFocus(audioFocusListener, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
+        }
 
         if (status != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             return;
@@ -1794,12 +1807,10 @@ public class MusicService extends Service {
 
                     cancelShutdown();
                     updateNotification();
-
                 } else if (getCurrentPlaylist().size() == 0) {
                     // This is mostly so that if you press 'play' on a bluetooth headset
                     // without ever having played anything before, it will still play
                     // something.
-
                     if (queueReloading) {
                         playOnQueueLoad = true;
                     } else {
@@ -1808,7 +1819,6 @@ public class MusicService extends Service {
                 }
                 break;
             }
-
             case REMOTE: {
                 // if we are at the end of the song, go to the next song first
                 final long duration = player.getDuration();
@@ -1902,31 +1912,35 @@ public class MusicService extends Service {
                 metaData.putLong(MediaMetadataCompat.METADATA_KEY_NUM_TRACKS, (long) (getQueue().size()));
             }
 
-            //Glide has to be called from the main thread.
-            doOnMainThread(() -> Glide.with(MusicService.this)
-                    .load(getAlbum())
-                    .asBitmap()
-                    .override(1024, 1024)
-                    .into(new SimpleTarget<Bitmap>() {
-                        @Override
-                        public void onResourceReady(Bitmap bitmap, GlideAnimation<? super Bitmap> glideAnimation) {
-                            if (bitmap != null) {
-                                metaData.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, bitmap);
+            if (SettingsManager.getInstance().showLockscreenArtwork()) {
+                //Glide has to be called from the main thread.
+                doOnMainThread(() -> Glide.with(MusicService.this)
+                        .load(getAlbum())
+                        .asBitmap()
+                        .override(1024, 1024)
+                        .into(new SimpleTarget<Bitmap>() {
+                            @Override
+                            public void onResourceReady(Bitmap bitmap, GlideAnimation<? super Bitmap> glideAnimation) {
+                                if (bitmap != null) {
+                                    metaData.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, bitmap);
+                                }
+                                try {
+                                    mediaSession.setMetadata(metaData.build());
+                                } catch (NullPointerException e) {
+                                    metaData.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, null);
+                                    mediaSession.setMetadata(metaData.build());
+                                }
                             }
-                            try {
-                                mediaSession.setMetadata(metaData.build());
-                            } catch (NullPointerException e) {
-                                metaData.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, null);
-                                mediaSession.setMetadata(metaData.build());
-                            }
-                        }
 
-                        @Override
-                        public void onLoadFailed(Exception e, Drawable errorDrawable) {
-                            super.onLoadFailed(e, errorDrawable);
-                            mediaSession.setMetadata(metaData.build());
-                        }
-                    }));
+                            @Override
+                            public void onLoadFailed(Exception e, Drawable errorDrawable) {
+                                super.onLoadFailed(e, errorDrawable);
+                                mediaSession.setMetadata(metaData.build());
+                            }
+                        }));
+            } else {
+                mediaSession.setMetadata(metaData.build());
+            }
 
             mediaSession.setPlaybackState(new PlaybackStateCompat.Builder()
                     .setActions(playbackActions)
@@ -1936,6 +1950,8 @@ public class MusicService extends Service {
     }
 
     void updateNotification() {
+
+        Log.i(TAG, "updateNotification called");
 
         final int notifyMode;
 
@@ -1953,7 +1969,7 @@ public class MusicService extends Service {
                 break;
             case NOTIFY_MODE_BACKGROUND:
                 try {
-                    notificationHelper.notify(this, currentSong, mediaSession);
+                    notificationHelper.notify(this, currentSong, isPlaying(), mediaSession);
                 } catch (ConcurrentModificationException e) {
                     LogUtils.logException(TAG, "Exception while attempting to show notification", e);
                 }
@@ -2276,71 +2292,99 @@ public class MusicService extends Service {
     }
 
     /**
-     * Removes all instances of the track with the given id from the playlist.
+     * Removes the first instance of the Song the playlist & shuffleList.
      *
-     * @param song   The Song to be removed
-     * @param notify true to broadcast a QUEUE_CHANGE event
-     */
-    public void removeTrack(final Song song, boolean notify) {
-        synchronized (this) {
-            List<Song> songs = new ArrayList<>();
-            songs.add(song);
-            removeTracks(songs, notify);
-        }
-    }
-
-    /**
-     * Removes the range of tracks specified from the play list. If a file
-     * within the range is the file currently being played, playback will move
-     * to the next file after the range.
      *
-     * @param songs  the Songs to remove
-     * @param notify true to broadcast a QUEUE_CHANGE event
      */
-    public void removeTracks(List<Song> songs, boolean notify) {
+    public void removeSong(int position) {
         synchronized (this) {
+            List<Song> otherPlaylist = getCurrentPlaylist().equals(playlist) ? shuffleList : playlist;
+            Song song = getCurrentPlaylist().remove(position);
+            otherPlaylist.remove(song);
 
-            if (songs.isEmpty()) {
-                return;
-            }
-
-            int first = Collections.indexOfSubList(getCurrentPlaylist(), songs);
-
-            playlist.removeAll(songs);
-            shuffleList.removeAll(songs);
-
-            boolean gotoNext = false;
-
-            //If we're removing the current song from the queue, we need to adjust the playback position
-            //accordingly.
-            if (songs.contains(currentSong)) {
-                playPos = first;
-                gotoNext = true;
+            if (getQueuePosition() == position) {
+                removedCurrentSong();
             } else {
                 playPos = getCurrentPlaylist().indexOf(currentSong);
             }
 
-            if (gotoNext) {
-                if (getCurrentPlaylist().isEmpty()) {
-                    stop(true);
-                    playPos = -1;
-                } else {
-                    if (playPos >= getCurrentPlaylist().size()) {
-                        playPos = 0;
-                    }
-                    final boolean wasPlaying = isPlaying();
-                    stop(false);
-                    openCurrentAndNext();
-                    if (wasPlaying) {
-                        play();
-                    }
-                }
-                notifyChange(InternalIntents.META_CHANGED);
+            notifyChange(InternalIntents.QUEUE_CHANGED);
+        }
+    }
+
+    /**
+     * Removes the range of Songs specified from the playlist & shuffleList. If a Song
+     * within the range is the file currently being played, playback will move
+     * to the next Song after the range.
+     *
+     * @param songsToRemove the Songs to remove
+     */
+    public void removeSongs(@NonNull List<Song> songsToRemove) {
+        synchronized (this) {
+
+            playlist.removeAll(songsToRemove);
+            shuffleList.removeAll(songsToRemove);
+
+            if (songsToRemove.contains(currentSong)) {
+                /*
+                * If we remove a list of songs from the current queue, and that list contains our currently
+                * playing song, we need to figure out which song should play next. We'll play the first song
+                * that comes after the list of songs to be removed.
+                *
+                * In this example, let's say Song 7 is currently playing
+                *
+                * Playlist:                    [Song 3,    Song 4,     Song 5,     Song 6,     Song 7,     Song 8]
+                * Indices:                     [0,         1,          2,          3,          4,          5]
+                *
+                * Remove;                                              [Song 5,     Song 6,     Song 7]
+                *
+                * First removed song:                                  Song 5
+                * Index of first removed song:                         2
+                *
+                * Playlist after removal:      [Song 3,    Song 4,     Song 8]
+                * Indices:                     [0,         1,          2]
+                *
+                *
+                * So after the removal, we'll play index 2, which is Song 8.
+                */
+                playPos = Collections.indexOfSubList(getCurrentPlaylist(), songsToRemove);
+                removedCurrentSong();
+            } else {
+                playPos = getCurrentPlaylist().indexOf(currentSong);
             }
 
-            if (notify) {
-                notifyChange(InternalIntents.QUEUE_CHANGED);
+            notifyChange(InternalIntents.QUEUE_CHANGED);
+        }
+    }
+
+    private void removedCurrentSong() {
+        if (getCurrentPlaylist().isEmpty()) {
+            stop(true);
+            playPos = -1;
+        } else {
+            if (playPos >= getCurrentPlaylist().size()) {
+                playPos = 0;
             }
+            final boolean wasPlaying = isPlaying();
+            stop(false);
+            openCurrentAndNext();
+            if (wasPlaying) {
+                play();
+            }
+        }
+        notifyChange(InternalIntents.META_CHANGED);
+    }
+
+    public void toggleFavorite() {
+        if (currentSong != null) {
+            PlaylistUtils.toggleFavorite(currentSong, isFavorite -> {
+                if (isFavorite) {
+                    Toast.makeText(MusicService.this, getString(R.string.song_to_favourites, currentSong.name), Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(MusicService.this, getString(R.string.song_removed_from_favourites, currentSong.name), Toast.LENGTH_SHORT).show();
+                }
+                notifyChange(InternalIntents.FAVORITE_CHANGED);
+            });
         }
     }
 
@@ -2507,6 +2551,7 @@ public class MusicService extends Service {
         return null;
     }
 
+    @Nullable
     public Song getSong() {
         return currentSong;
     }
@@ -2603,7 +2648,7 @@ public class MusicService extends Service {
     }
 
     public Single<Boolean> isFavorite() {
-        return PlaylistUtils.isFavorite(getSong());
+        return PlaylistUtils.isFavorite(currentSong);
     }
 
     public void toggleShuffleMode() {
@@ -2724,7 +2769,7 @@ public class MusicService extends Service {
     private void startForegroundImpl() {
         try {
             notificationStateHandler.sendEmptyMessage(NotificationStateHandler.START_FOREGROUND);
-            notificationHelper.startForeground(this, currentSong, mediaSession);
+            notificationHelper.startForeground(this, currentSong, isPlaying(), mediaSession);
         } catch (NullPointerException | ConcurrentModificationException e) {
             Crashlytics.log("startForegroundImpl error: " + e.getMessage());
         }

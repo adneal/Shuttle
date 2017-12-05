@@ -15,9 +15,11 @@ import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
+import com.annimon.stream.Stream;
 import com.crashlytics.android.Crashlytics;
 import com.simplecity.amp_library.utils.SettingsManager;
 
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -189,7 +191,7 @@ public class EqualizerService extends Service {
     /**
      * Known audio sessions and their associated audioeffect suites.
      */
-    protected final ConcurrentHashMap<Integer, EffectSet> mAudioSessions = new ConcurrentHashMap<>();
+    protected final Map<Integer, EffectSet> mAudioSessions = new ConcurrentHashMap<>();
 
     /**
      * Receive new broadcast intents for adding DSP to session
@@ -200,7 +202,6 @@ public class EqualizerService extends Service {
             String action = intent.getAction();
             int sessionId = intent.getIntExtra(AudioEffect.EXTRA_AUDIO_SESSION, 0);
             if (action.equals(ACTION_OPEN_EQUALIZER_SESSION)) {
-//                Log.i(TAG, "Open session called. Session: " + sessionId);
                 if (!mAudioSessions.containsKey(sessionId)) {
                     try {
                         EffectSet effectSet = new EffectSet(sessionId);
@@ -212,7 +213,6 @@ public class EqualizerService extends Service {
                 }
             }
             if (action.equals(ACTION_CLOSE_EQUALIZER_SESSION)) {
-//                Log.i(TAG, "Close session called");
                 EffectSet gone = mAudioSessions.remove(sessionId);
                 if (gone != null) {
                     gone.release();
@@ -246,11 +246,9 @@ public class EqualizerService extends Service {
 
         unregisterReceiver(mAudioSessionReceiver);
 
-        for (EffectSet gone : mAudioSessions.values()) {
-            if (gone != null) {
-                gone.release();
-            }
-        }
+        Stream.of(mAudioSessions.values())
+                .filter(effectSet -> effectSet != null)
+                .forEach(EffectSet::release);
 
         super.onDestroy();
     }

@@ -111,6 +111,8 @@
         \n• ChromeCast Support
         \n\nIt also helps to promote further development.\n\nYou do not need to upgrade if you already have Shuttle+</string>
 
+    <string name="upgrade_required_folders">Upgrade to Shuttle+</string>
+
     <string name="btn_upgrade">Upgrade</string>
     <!-- -->
     <string name="get_pro_button_no">No thanks</string>
@@ -187,13 +189,14 @@
     <string name="fav_add">Favorite</string>
     <!-- Context menu item -->
     <string name="play_selection">Play</string>
-    <!-- Multi select menu item-->
+    <!-- Menu item-->
     <string name="menu_add_to">Add to…</string>
     <!-- Multi select menu item-->
     <string name="menu_playlist">Playlist</string>
     <!-- Multi select menu item-->
     <string name="menu_queue">Queue</string>
-    <!-- Context menu item -->
+    <!-- Artist overflow menu item-->
+    <string name="menu_album_shuffle">Album shuffle</string>
     <!-- Context menu item -->
     <string name="new_playlist">New</string>
     <!-- menu item to save the current list as a new playlist -->
@@ -226,6 +229,7 @@
     <string name="delete_item">Delete</string>
     <!-- Menu item to play back all the songs in the currently showing list in shuffle mode -->
     <string name="shuffle_all">Shuffle All</string>
+
     <!-- title of the "current playlist" screen when not in party shuffle mode -->
     <string name="nowplaying_title">Now Playing</string>
     <!-- -->
@@ -343,6 +347,10 @@
     <!-- Settings summary for gmail style placeholders checkbox-->
     <string name="pref_summary_placeholders">Displays \'Gmail\' style placeholders by default.
         If unchecked, the Shuttle icon will be used as a placeholder instead</string>
+    <!-- Settings title for the enable lockscreen controls checkbox -->
+    <string name="pref_title_lockscreen">Enable Lockscreen Artwork</string>
+    <!-- Settings summary for the enable lockscreen controls checkbox -->
+    <string name="pref_summary_lockscreen">Enables/disables the artwork on the lockscreen</string>
     <!-- Settings title for the Display heading -->
     <string name="pref_title_display">Display</string>
     <!-- Settings title for the keep screen on checkbox -->
@@ -592,8 +600,8 @@
     <string name="sleep_timer_stop_title">Stop sleep timer?</string>
     <!-- Toast when sleep timer is set -->
     <string name="sleep_timer_started">Sleep timer started</string>
-    <!-- Sleep timer "Set time..." -->
-    <string name="sleep_timer_set_time">Set time…</string>
+    <!-- Sleep timer "Set minutes..." -->
+    <string name="sleep_timer_set_minutes">Set minutes…</string>
     <!-- Sleep timer "5 minutes" -->
     <string name="sleep_timer_5_mins">5 minutes</string>
     <!-- Sleep timer "15 minutes" -->
@@ -794,5 +802,9 @@
     <string name="shortcut_playlist_long_label">Open Favorites Playlist</string>
     <!-- "Playlist" Shortcut label disabled. Possibly shows if the playlist has been deleted.-->
     <string name="shortcut_playlist_disabled">Playlist not available</string>
+
+
+    <!-- Displayed at the top of the album list, album shuffle mode-->
+    <string name="shuffle_albums">Album Shuffle</string>
 
 </resources>

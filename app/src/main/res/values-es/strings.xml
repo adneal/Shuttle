@@ -159,13 +159,13 @@
     <string name="fav_add">Agregar a Favoritos</string>
     <!-- Context menu item -->
     <string name="play_selection">Reproducir</string>
-    <!-- Multi select menu item-->
+    <!-- Menu item-->
     <string name="menu_add_to">Añadir a</string>
     <!-- Multi select menu item-->
     <string name="menu_playlist">Lista de reproducción</string>
     <!-- Multi select menu item-->
     <string name="menu_queue">Cola</string>
-    <!-- Context menu item -->
+    <!-- Artist overflow menu item-->
     <!-- Context menu item -->
     <string name="new_playlist">Nuevo</string>
     <!-- menu item to save the current list as a new playlist -->
@@ -239,6 +239,10 @@
     <string name="pref_title_theme_dark">Oscuro</string>
     <string name="pref_title_theme_light">Claro</string>
     <string name="pref_title_theme_black">Negro</string>
+    <string name="pref_group_palette">Paleta</string>
+    <string name="pref_title_palette">Usar colores del álbum</string>
+    <string name="pref_summary_palette">Si se activa, Shuttle detectará el color más prominente en el álbum y usará este color como el \"color primario\" en la aplicación</string>
+    <string name="pref_title_palette_now_playing">Sólo en la pantalla de \"Escuchando ahora\"</string>
     <!--Settings title for whitelist/blacklist-->
     <string name="pref_title_blacklist">Lista Negra/Lista Blanca</string>
     <!--Settings title for viewing blacklist-->
@@ -304,6 +308,11 @@
     <!-- Settings summary for gmail style placeholders checkbox-->
     <string name="pref_summary_placeholders">Muestra marcadores estilo \'Gmail\' por defecto
  Si no se selecciona, se utilizará el icono de Shuttle como marcador</string>
+    <!-- Settings title for the enable lockscreen controls checkbox -->
+    <string name="pref_title_lockscreen">Habilitar carátula en Pantalla de Bloqueo</string>
+    <!-- Settings summary for the enable lockscreen controls checkbox -->
+    <string name="pref_summary_lockscreen">Habilita/Deshabilita los controles e información de artista cuando la pantalla está bloqueada (ICS+)
+ \nPrecaución: No seleccione esta opción si usa Shuttle con un receptor Bluetooth</string>
     <!-- Settings title for the Display heading -->
     <string name="pref_title_display">Pantalla</string>
     <!-- Settings title for the keep screen on checkbox -->
@@ -345,6 +354,7 @@
     <!-- Settings summary for downloading the Simple Last.fm scrobbler  -->
     <string name="pref_summary_simple_download">Descargar Simple Last.FM scrobbler desde Google Play Store</string>
     <!-- Settings title for the About heading -->
+    <string name="pref_title_changelog">Lista de cambios</string>
     <!-- Settings title for the Support heading -->
     <string name="pref_title_support">Soporte</string>
     <string name="pref_title_version">"Versión "</string>
@@ -531,8 +541,7 @@
     <string name="sleep_timer_stop_title">¿Detener el temporizador?</string>
     <!-- Toast when sleep timer is set -->
     <string name="sleep_timer_started">Temporizador iniciado</string>
-    <!-- Sleep timer "Set time..." -->
-    <string name="sleep_timer_set_time">Establecer tiempo</string>
+    <!-- Sleep timer "Set minutes..." -->
     <!-- Sleep timer "5 minutes" -->
     <string name="sleep_timer_5_mins">5 minutos</string>
     <!-- Sleep timer "15 minutes" -->
@@ -708,65 +717,5 @@
     <string name="shortcut_playlist_long_label">Abrir lista de favoritos</string>
     <!-- "Playlist" Shortcut label disabled. Possibly shows if the playlist has been deleted.-->
     <string name="shortcut_playlist_disabled">"Lista de reproducción no disponible "</string>
-    <!-- Displayed when an M3U playlist is being saved, but it already exists -->
-    <string name="playlist_save_exists">"La lista de reproducción ya existe "</string>
-    <plurals name="NNNtracksdeleted">
-        <item quantity="one">1 canción borrada</item>
-        <item quantity="other"><xliff:g id="songs_to_delete">%d</xliff:g> canciones borradas</item>
-    </plurals>
-    <plurals name="NNNtrackstofavourites">
-        <item quantity="one">1 canción añadida a favoritos</item>
-        <item quantity="other"><xliff:g id="number" example="27">%d</xliff:g> canciones añadidas a favoritos</item>
-    </plurals>
-    <!-- Displays when a restart is required due to a change (themes etc) -->
-    <string name="restart_tite">Reinicio Requerido</string>
-    <!-- Displays when a restart is required due to a change (themes etc) -->
-    <string name="restart_message">Los cambios no tendrán efecto hasta que reinicies Shuttle</string>
-    <!-- Displayed in the color picker dialog, to choose a 'custom' color -->
-    <string name="dialog_custom">Personalizar</string>
-    <!-- Context menu item -->
-    <string name="add_to_playlist">Agregar a la lista</string>
-    <!-- Context menu item to remove the selected item from the playlist -->
-    <string name="remove_from_playlist">Remover de la lista</string>
-    <!-- -->
-    <string name="share_title">Compartir</string>
-    <!-- Playlist context menu item to delete the selected playlist. -->
-    <string name="delete_playlist_menu">Eliminar</string>
-    <!--Settings title for white accent color) -->
-    <string name="pref_title_theme_white_accent">Usar color de énfasis blanco</string>
-    <!--Settings summary for white accent color-->
-    <string name="pref_summary_theme_white_accent">Utiliza blanco para todo el color de énfasis, excepto para aquellos que necesitan mostrar un estado (aleatorio y repetir necesitan un color diferente al blanco para mostrar que están encendidos).</string>
-    <!--Settings category for 'notification' items -->
-    <string name="pref_category_notif_drawer">Cajón de notificaciones</string>
-    <!-- Settings title for inverting the notification drawer text & icons -->
-    <string name="pref_title_invert_notif_icons">Invertir íconos/texto de notificación</string>
-    <!--Settings summary for the downloading more themes -->
-    <string name="pref_summary_get_pro_themes">Más temas disponibles en Shuttle+</string>
-    <!--Settings title for clearing whitelist-->
-    <string name="pref_title_update_whitelist">Actualizar</string>
-    <!-- Settings title for the enable lockscreen controls checkbox -->
-    <string name="pref_title_lockscreen">Habilitar carátula en Pantalla de Bloqueo</string>
-    <!-- Settings summary for the enable lockscreen controls checkbox -->
-    <string name="pref_summary_lockscreen">Habilita/Deshabilita los controles e información de artista cuando la pantalla está bloqueada (ICS+)
- \nPrecaución: No seleccione esta opción si usa Shuttle con un receptor Bluetooth</string>
-    <!-- Settings title for the About heading -->
-    <string name="pref_title_about">Lista de cambios</string>
-    <!-- Sleep timer "set" -->
-    <string name="sleep_timer_set">Establecer</string>
-    <!-- Default name of artist that doesn't have a name in the metadata -->
-    <string name="unknown_artist_name">Artista desconocido</string>
-    <!-- Default name of album artist that doesn't have a name in the metadata -->
-    <string name="unknown_album_name">Álbum desconocido</string>
-    <!-- Default name of genre that doesn't have a name in the metadata -->
-    <string name="unknown_genre_name">Género desconocido</string>
-    <!-- Default name of album artist that doesn't have a name in the metadata -->
-    <string name="unknown_album_artist_name">Artista de álbum desconocido</string>
-    <!-- Accessibility button description -->
-    <string name="btn_queue">Ver lista de reproducción</string>
-    <!-- Accessibility button description -->
-    <string name="btn_show_queue">Mostrar cola</string>
-    <!-- Accessibility 'show lyrics' -->
-    <string name="btn_show_lyrics">Mostrar letras</string>
-    <string name="toast_purchase_failed">Algo salió mal. Por favor, inténtalo de nuevo más tarde..</string>
-    <string name="search_title_only">Solo título</string>
+    <!-- Displayed at the top of the album list, album shuffle mode-->
 </resources>

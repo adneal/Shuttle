@@ -49,29 +49,6 @@ public class DialogUtils {
         }
     }
 
-    /**
-     * Displayed when the user chooses to upgrade
-     */
-    public static MaterialDialog getUpgradeDialog(final Context context, MaterialDialog.SingleButtonCallback listener) {
-        return getBuilder(context)
-                .title(context.getResources().getString(R.string.get_pro_title))
-                .content(context.getResources().getString(R.string.upgrade_dialog_message))
-                .positiveText(R.string.btn_upgrade)
-                .onPositive(listener)
-                .negativeText(R.string.get_pro_button_no)
-                .build();
-    }
-
-    public static void showDownloadWarningDialog(Context context, MaterialDialog.SingleButtonCallback listener) {
-        getBuilder(context)
-                .title(R.string.pref_title_download_artwork)
-                .content(R.string.pref_warning_download_artwork)
-                .positiveText(R.string.download)
-                .onPositive(listener)
-                .negativeText(R.string.cancel)
-                .show();
-    }
-
     public static void showWeekSelectorDialog(final Context context) {
 
         @SuppressLint("InflateParams")
@@ -87,7 +64,7 @@ public class DialogUtils {
                 .title(R.string.week_selector)
                 .customView(view, false)
                 .negativeText(R.string.cancel)
-                .positiveText(R.string.picker_set)
+                .positiveText(R.string.button_ok)
                 .onPositive((materialDialog, dialogAction) -> {
                     int numweeks;
                     numweeks = numberPicker.getValue();

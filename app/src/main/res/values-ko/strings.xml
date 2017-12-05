@@ -133,7 +133,7 @@
     <!-- -->
     <string name="delete_file_confirmation_dialog">정말 \"<xliff:g id="file">%s</xliff:g>\"을(를) 영구적으로 삭제하시겠습니까?</string>
     <!-- Displayed when user presses 'delete artwork' -->
-    <string name="delete_artwork_confirmation_dialog">정말 기기에 있는 모든 앨범 사진들을 삭제하시겠습니까?</string>
+    <string name="delete_artwork_confirmation_dialog">정말 기기에 있는 모든 앨범아트들을 삭제하시겠습니까?</string>
     <!--"Set Ringtone" title -->
     <string name="dialog_title_set_ringtone">벨소리 설정</string>
     <!-- "Set Ringtone" message -->
@@ -169,13 +169,13 @@
     <string name="fav_add">즐겨찾기</string>
     <!-- Context menu item -->
     <string name="play_selection">재생</string>
-    <!-- Multi select menu item-->
+    <!-- Menu item-->
     <string name="menu_add_to">다음으로 추가...</string>
     <!-- Multi select menu item-->
     <string name="menu_playlist">재생 목록</string>
     <!-- Multi select menu item-->
     <string name="menu_queue">대기열</string>
-    <!-- Context menu item -->
+    <!-- Artist overflow menu item-->
     <!-- Context menu item -->
     <string name="new_playlist">새로 만들기</string>
     <!-- menu item to save the current list as a new playlist -->
@@ -249,6 +249,10 @@
     <string name="pref_title_theme_dark">어두운 테마</string>
     <string name="pref_title_theme_light">밝은 테마</string>
     <string name="pref_title_theme_black">검정 테마</string>
+    <string name="pref_group_palette">팔레트</string>
+    <string name="pref_title_palette">앨범아트의 색상 사용</string>
+    <string name="pref_summary_palette">활성화하면 Shuttle에서 가장 두드러진 색상을 찾아, 앱의 \'주 색상\'으로 사용합니다.</string>
+    <string name="pref_title_palette_now_playing">\'지금 재생 중\' 화면에서만</string>
     <!--Settings title for whitelist/blacklist-->
     <string name="pref_title_blacklist">화이트리스트/블랙리스트</string>
     <!--Settings title for viewing blacklist-->
@@ -314,6 +318,10 @@
     <!-- Settings summary for gmail style placeholders checkbox-->
     <string name="pref_summary_placeholders">Gmail 스타일 플레이스 홀더를 사용합니다.
         이 항목을 비활성화하면 Gmail식 첫 글자 플레이스 홀더 대신 Shuttle 아이콘을 사용합니다.</string>
+    <!-- Settings title for the enable lockscreen controls checkbox -->
+    <string name="pref_title_lockscreen">잠금 화면 앨범아트 활성화</string>
+    <!-- Settings summary for the enable lockscreen controls checkbox -->
+    <string name="pref_summary_lockscreen">잠금 화면에 앨범아트를 표시합니다.</string>
     <!-- Settings title for the Display heading -->
     <string name="pref_title_display">화면</string>
     <!-- Settings title for the keep screen on checkbox -->
@@ -355,6 +363,7 @@
     <!-- Settings summary for downloading the Simple Last.fm scrobbler  -->
     <string name="pref_summary_simple_download">Google Play 스토어에서 Simple Last.FM Scrobbler를 다운로드합니다</string>
     <!-- Settings title for the About heading -->
+    <string name="pref_title_changelog">변경 사항</string>
     <!-- Settings title for the Support heading -->
     <string name="pref_title_support">지원</string>
     <string name="pref_title_version">버전</string>
@@ -539,8 +548,8 @@
     <string name="sleep_timer_stop_title">수면 타이머를 정지하겠습니까?</string>
     <!-- Toast when sleep timer is set -->
     <string name="sleep_timer_started">수면 타이머 시작됨</string>
-    <!-- Sleep timer "Set time..." -->
-    <string name="sleep_timer_set_time">시간 설정...</string>
+    <!-- Sleep timer "Set minutes..." -->
+    <string name="sleep_timer_set_minutes">분 단위 설정...</string>
     <!-- Sleep timer "5 minutes" -->
     <string name="sleep_timer_5_mins">5 분</string>
     <!-- Sleep timer "15 minutes" -->
@@ -714,62 +723,5 @@
     <string name="shortcut_playlist_long_label">즐겨찾는 재생 목록 열기</string>
     <!-- "Playlist" Shortcut label disabled. Possibly shows if the playlist has been deleted.-->
     <string name="shortcut_playlist_disabled">재생 목록 사용 불가</string>
-    <!-- Displayed when an M3U playlist is being saved, but it already exists -->
-    <string name="playlist_save_exists">재생 목록이 이미 존재합니다.</string>
-    <plurals name="NNNtracksdeleted">
-        <item quantity="other"><xliff:g id="songs_to_delete">%d</xliff:g>개의 노래가 삭제되었습니다.</item>
-    </plurals>
-    <plurals name="NNNtrackstofavourites">
-        <item quantity="other"><xliff:g example="27" id="number">%d</xliff:g>개의 노래가 즐겨찾기에 추가되었습니다.</item>
-    </plurals>
-    <!-- Displays when a restart is required due to a change (themes etc) -->
-    <string name="restart_tite">앱 재시작 필요</string>
-    <!-- Displays when a restart is required due to a change (themes etc) -->
-    <string name="restart_message">이 변경 사항은 Shuttle을 재시작해야 적용됩니다.</string>
-    <!-- Displayed in the color picker dialog, to choose a 'custom' color -->
-    <string name="dialog_custom">사용자 지정</string>
-    <!-- Context menu item -->
-    <string name="add_to_playlist">재생 목록</string>
-    <!-- Context menu item to remove the selected item from the playlist -->
-    <string name="remove_from_playlist">재생 목록에서 삭제</string>
-    <!-- -->
-    <string name="share_title">공유</string>
-    <!-- Playlist context menu item to delete the selected playlist. -->
-    <string name="delete_playlist_menu">삭제</string>
-    <!--Settings title for white accent color) -->
-    <string name="pref_title_theme_white_accent">강조 색상으로 흰색 사용</string>
-    <!--Settings summary for white accent color-->
-    <string name="pref_summary_theme_white_accent">필요한 곳을 제외한 모든 강조되는 부분을 흰색으로 사용합니다. (랜덤 재생 및 반복 버튼은 켜진 상태를 표시하기 위하여 다른 색상이 필요합니다)</string>
-    <!--Settings category for 'notification' items -->
-    <string name="pref_category_notif_drawer">알림 표시창</string>
-    <!-- Settings title for inverting the notification drawer text & icons -->
-    <string name="pref_title_invert_notif_icons">알림 아이콘/글자 반전</string>
-    <!--Settings summary for the downloading more themes -->
-    <string name="pref_summary_get_pro_themes">Shuttle+에서 더 많은 테마를 사용할 수 있습니다.</string>
-    <!--Settings title for clearing whitelist-->
-    <string name="pref_title_update_whitelist">업데이트</string>
-    <!-- Settings title for the enable lockscreen controls checkbox -->
-    <string name="pref_title_lockscreen">잠금 화면 앨범아트 활성화</string>
-    <!-- Settings summary for the enable lockscreen controls checkbox -->
-    <string name="pref_summary_lockscreen">잠금 화면에 앨범아트를 표시합니다.</string>
-    <!-- Settings title for the About heading -->
-    <string name="pref_title_about">변경 사항</string>
-    <!-- Sleep timer "set" -->
-    <string name="sleep_timer_set">설정</string>
-    <!-- Default name of artist that doesn't have a name in the metadata -->
-    <string name="unknown_artist_name">알 수 없는 아티스트</string>
-    <!-- Default name of album artist that doesn't have a name in the metadata -->
-    <string name="unknown_album_name">알 수 없는 앨범</string>
-    <!-- Default name of genre that doesn't have a name in the metadata -->
-    <string name="unknown_genre_name">알 수 없는 장르</string>
-    <!-- Default name of album artist that doesn't have a name in the metadata -->
-    <string name="unknown_album_artist_name">알 수 없는 앨범 아티스트</string>
-    <!-- Accessibility button description -->
-    <string name="btn_queue">재생 대기열 보기</string>
-    <!-- Accessibility button description -->
-    <string name="btn_show_queue">대기열 보기</string>
-    <!-- Accessibility 'show lyrics' -->
-    <string name="btn_show_lyrics">자막 보기</string>
-    <string name="toast_purchase_failed">뭔가가 잘못되었습니다. 나중에 다시 시도해 주세요..</string>
-    <string name="search_title_only">제목만</string>
+    <!-- Displayed at the top of the album list, album shuffle mode-->
 </resources>

@@ -19,6 +19,7 @@ import android.widget.Toast;
 
 import com.afollestad.aesthetic.Aesthetic;
 import com.greysonparrelli.permiso.Permiso;
+import com.simplecity.amp_library.BuildConfig;
 import com.simplecity.amp_library.IabManager;
 import com.simplecity.amp_library.R;
 import com.simplecity.amp_library.ShuttleApplication;
@@ -26,12 +27,14 @@ import com.simplecity.amp_library.model.Playlist;
 import com.simplecity.amp_library.model.Query;
 import com.simplecity.amp_library.playback.MusicService;
 import com.simplecity.amp_library.sql.sqlbrite.SqlBriteUtils;
+import com.simplecity.amp_library.ui.dialog.ChangelogDialog;
 import com.simplecity.amp_library.ui.drawer.DrawerProvider;
 import com.simplecity.amp_library.ui.drawer.NavigationEventRelay;
 import com.simplecity.amp_library.ui.fragments.MainController;
 import com.simplecity.amp_library.utils.MusicServiceConnectionUtils;
 import com.simplecity.amp_library.utils.MusicUtils;
 import com.simplecity.amp_library.utils.PlaylistUtils;
+import com.simplecity.amp_library.utils.SettingsManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -60,7 +63,8 @@ public class MainActivity extends BaseCastActivity implements
 
     private boolean hasPendingPlaybackRequest;
 
-    @Inject NavigationEventRelay navigationEventRelay;
+    @Inject
+    NavigationEventRelay navigationEventRelay;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -86,7 +90,7 @@ public class MainActivity extends BaseCastActivity implements
         navigationView = findViewById(R.id.navView);
 
         //Ensure the drawer draws a content scrim over the status bar.
-        drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+        drawerLayout = findViewById(R.id.drawer_layout);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
             drawerLayout.setOnApplyWindowInsetsListener((view, windowInsets) -> {
                 navigationView.dispatchApplyWindowInsets(windowInsets);
@@ -102,6 +106,16 @@ public class MainActivity extends BaseCastActivity implements
         }
 
         handleIntent(getIntent());
+
+        // Calls through to IabManager.setup()
+        IabManager.getInstance();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        showChangelogDialog();
     }
 
     @Override
@@ -153,7 +167,7 @@ public class MainActivity extends BaseCastActivity implements
     private void handlePlaybackRequest(Intent intent) {
         if (intent == null) {
             return;
-        } else if (MusicServiceConnectionUtils.sServiceBinder == null) {
+        } else if (MusicServiceConnectionUtils.serviceBinder == null) {
             hasPendingPlaybackRequest = true;
             return;
         }
@@ -174,8 +188,8 @@ public class MainActivity extends BaseCastActivity implements
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(playlist -> {
-                            MusicUtils.playAll(playlist.getSongsObservable()
-                                    .first(new ArrayList<>()), message -> Toast.makeText(this, message, Toast.LENGTH_SHORT).show());
+                            MusicUtils.playAll(playlist.getSongsObservable().first(new ArrayList<>()),
+                                    message -> Toast.makeText(this, message, Toast.LENGTH_SHORT).show());
                             // Make sure to process intent only once
                             setIntent(new Intent());
                         });
@@ -200,13 +214,18 @@ public class MainActivity extends BaseCastActivity implements
         return id;
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (IabManager.getInstance().iabHelper == null) return;
+    private void showChangelogDialog() {
+        int storedVersionCode = SettingsManager.getInstance().getStoredVersionCode();
 
-        if (!IabManager.getInstance().iabHelper.handleActivityResult(requestCode, resultCode, data)) {
-            super.onActivityResult(requestCode, resultCode, data);
+        // If we've stored a version code in the past, and it's lower than the current version code,
+        // we can show the changelog.
+        // Don't show the changelog for first time users.
+        if (storedVersionCode != -1 && storedVersionCode < BuildConfig.VERSION_CODE) {
+            if (SettingsManager.getInstance().getShowChangelogOnLaunch()) {
+                ChangelogDialog.getChangelogDialog(this).show();
+            }
         }
+        SettingsManager.getInstance().setVersionCode();
     }
 
     @Override
@@ -228,7 +247,7 @@ public class MainActivity extends BaseCastActivity implements
 
     @Override
     public void toolbarAttached(Toolbar toolbar) {
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        DrawerLayout drawer = findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close) {
             @Override
             public void onDrawerSlide(View drawerView, float slideOffset) {

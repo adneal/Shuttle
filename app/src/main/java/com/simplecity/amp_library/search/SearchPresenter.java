@@ -209,7 +209,7 @@ public class SearchPresenter extends Presenter<SearchView> implements
     @Override
     public void onAlbumOverflowClicked(View v, Album album) {
         PopupMenu menu = new PopupMenu(v.getContext(), v);
-        menu.inflate(R.menu.menu_album);
+        MenuUtils.setupAlbumMenu(menu);
         menu.setOnMenuItemClickListener(MenuUtils.getAlbumMenuClickListener(v.getContext(), album, taggerDialog -> {
             SearchView searchView = getView();
             if (searchView != null) {
@@ -455,7 +455,7 @@ public class SearchPresenter extends Presenter<SearchView> implements
 
             int index = songs.indexOf(songView.song);
 
-            MusicUtils.playAll(songs, index, false, (String message) -> {
+            MusicUtils.playAll(songs, index, (String message) -> {
                 if (view != null) {
                     view.showToast(message);
                 }
@@ -470,14 +470,14 @@ public class SearchPresenter extends Presenter<SearchView> implements
         @Override
         public void onSongOverflowClick(int position, View v, Song song) {
             PopupMenu menu = new PopupMenu(v.getContext(), v);
-            menu.inflate(R.menu.menu_search);
+            MenuUtils.setupSongMenu(menu, false);
             menu.setOnMenuItemClickListener(MenuUtils.getSongMenuClickListener(v.getContext(), song,
                     taggerDialog -> {
                         SearchView searchView = getView();
                         if (searchView != null) {
                             searchView.showTaggerDialog(taggerDialog);
                         }
-                    }, null));
+                    }, null, null));
             menu.show();
         }
 
